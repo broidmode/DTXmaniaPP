@@ -353,8 +353,8 @@ namespace SampleFramework
 						if (newSettings.Direct3D9 != null)
 						{
 							var pp = newSettings.Direct3D9.PresentParameters;
-							pp.BackBufferWidth = GameWindowSize.Width;  // #23510 2010.10.31 add yyagi: to avoid setting BackBufferSize=ClientSize
-							pp.BackBufferHeight = GameWindowSize.Height;   // #23510 2010.10.31 add yyagi: to avoid setting BackBufferSize=ClientSize
+							pp.BackBufferWidth = clientWidth;   // Use actual client size for native rendering
+							pp.BackBufferHeight = clientHeight;  //
 							newSettings.Direct3D9.PresentParameters = pp;
 						}
 
@@ -389,8 +389,8 @@ namespace SampleFramework
 				newSettings.BackBufferWidth = 0;
 				newSettings.BackBufferHeight = 0;
 				var pp = newSettings.Direct3D9.PresentParameters;
-				pp.BackBufferWidth = GameWindowSize.Width;      // #23510 2010.10.31 add yyagi: to avoid setting BackBufferSize=ClientSize
-				pp.BackBufferHeight = GameWindowSize.Height;   // 
+				pp.BackBufferWidth = rect.Width;       // Use actual client size for native rendering
+				pp.BackBufferHeight = rect.Height;     //
 				newSettings.Direct3D9.PresentParameters = pp;
 				CreateDevice(newSettings);
 			}
@@ -411,8 +411,9 @@ namespace SampleFramework
 			newSettings.BackBufferWidth = 0;                                // #23510 2010.11.1 add yyagi to avoid to reset to 640x480 for the first time in XP.
 			newSettings.BackBufferHeight = 0;                               //
 			var pp = newSettings.Direct3D9.PresentParameters;
-			pp.BackBufferWidth = GameWindowSize.Width;      //
-			pp.BackBufferHeight = GameWindowSize.Height;   //
+			Rectangle screenRect = NativeMethods.GetClientRectangle(game.Window.Handle);
+			pp.BackBufferWidth = screenRect.Width;       // Use actual client size for native rendering
+			pp.BackBufferHeight = screenRect.Height;     //
 			newSettings.Direct3D9.PresentParameters = pp;
 
 			CreateDevice(newSettings);

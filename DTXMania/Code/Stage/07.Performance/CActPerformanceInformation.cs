@@ -66,6 +66,8 @@ namespace DTXMania
                     y -= 0x10;
                     CDTXMania.actDisplayString.tPrint(x, y, CCharacterConsole.EFontType.White, string.Format("Frame:         {0:####0} fps", CDTXMania.FPS.n現在のFPS));
                     y -= 0x10;
+                    CDTXMania.actDisplayString.tPrint(x, y, CCharacterConsole.EFontType.White, string.Format("FrameTime:     {0:0.00} ms (min {1:0.00} / max {2:0.00})", CDTXMania.FPS.dbCurrentFrameTimeMs, CDTXMania.FPS.dbMinFrameTimeMs, CDTXMania.FPS.dbMaxFrameTimeMs));
+                    y -= 0x10;
                     
                     if (CDTXMania.ConfigIni.nSoundDeviceType != 0)
                     {

@@ -403,10 +403,10 @@ namespace FDK
 			{
 				#region [ (A) 回転なし ]
 				//-----------------
-				float f補正値X = -0.5f;	// -0.5 は座標とピクセルの誤差を吸収するための座標補正値。(MSDN参照)
-				float f補正値Y = -0.5f;	//
-				float w = rc画像内の描画領域.Width;
-				float h = rc画像内の描画領域.Height;
+				float fx = x * CTexture.fScreenRatio + CTexture.rcPhysicalScreenDrawingArea.X - 0.5f;	// -0.5 は座標とピクセルの誤差を吸収するための座標補正値。(MSDN参照)
+				float fy = y * CTexture.fScreenRatio + CTexture.rcPhysicalScreenDrawingArea.Y - 0.5f;	//
+				float w = rc画像内の描画領域.Width * this.vcScaleRatio.X * CTexture.fScreenRatio;
+				float h = rc画像内の描画領域.Height * this.vcScaleRatio.Y * CTexture.fScreenRatio;
 				float f左U値 = ( (float) rc画像内の描画領域.Left ) / ( (float) this.szTextureSize.Width );
 				float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
 				float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
@@ -419,32 +419,32 @@ namespace FDK
 
 				// #27122 2012.1.13 from: 以下、マネージドオブジェクト（＝ガベージ）の量産を抑えるため、new は使わず、メンバに値を１つずつ直接上書きする。
 
-				this.cvTransformedColoredVertexies[ 0 ].Position.X = x + f補正値X;
-				this.cvTransformedColoredVertexies[ 0 ].Position.Y = y + f補正値Y;
+				this.cvTransformedColoredVertexies[ 0 ].Position.X = fx;
+				this.cvTransformedColoredVertexies[ 0 ].Position.Y = fy;
 				this.cvTransformedColoredVertexies[ 0 ].Position.Z = depth;
 				this.cvTransformedColoredVertexies[ 0 ].Position.W = 1.0f;
 				this.cvTransformedColoredVertexies[ 0 ].Color = color;
 				this.cvTransformedColoredVertexies[ 0 ].TextureCoordinates.X = f左U値;
 				this.cvTransformedColoredVertexies[ 0 ].TextureCoordinates.Y = f上V値;
 
-				this.cvTransformedColoredVertexies[ 1 ].Position.X = ( x + ( w * this.vcScaleRatio.X ) ) + f補正値X;
-				this.cvTransformedColoredVertexies[ 1 ].Position.Y = y + f補正値Y;
+				this.cvTransformedColoredVertexies[ 1 ].Position.X = fx + w;
+				this.cvTransformedColoredVertexies[ 1 ].Position.Y = fy;
 				this.cvTransformedColoredVertexies[ 1 ].Position.Z = depth;
 				this.cvTransformedColoredVertexies[ 1 ].Position.W = 1.0f;
 				this.cvTransformedColoredVertexies[ 1 ].Color = color;
 				this.cvTransformedColoredVertexies[ 1 ].TextureCoordinates.X = f右U値;
 				this.cvTransformedColoredVertexies[ 1 ].TextureCoordinates.Y = f上V値;
 
-				this.cvTransformedColoredVertexies[ 2 ].Position.X = x + f補正値X;
-				this.cvTransformedColoredVertexies[ 2 ].Position.Y = ( y + ( h * this.vcScaleRatio.Y ) ) + f補正値Y;
+				this.cvTransformedColoredVertexies[ 2 ].Position.X = fx;
+				this.cvTransformedColoredVertexies[ 2 ].Position.Y = fy + h;
 				this.cvTransformedColoredVertexies[ 2 ].Position.Z = depth;
 				this.cvTransformedColoredVertexies[ 2 ].Position.W = 1.0f;
 				this.cvTransformedColoredVertexies[ 2 ].Color = color;
 				this.cvTransformedColoredVertexies[ 2 ].TextureCoordinates.X = f左U値;
 				this.cvTransformedColoredVertexies[ 2 ].TextureCoordinates.Y = f下V値;
 
-				this.cvTransformedColoredVertexies[ 3 ].Position.X = ( x + ( w * this.vcScaleRatio.X ) ) + f補正値X;
-				this.cvTransformedColoredVertexies[ 3 ].Position.Y = ( y + ( h * this.vcScaleRatio.Y ) ) + f補正値Y;
+				this.cvTransformedColoredVertexies[ 3 ].Position.X = fx + w;
+				this.cvTransformedColoredVertexies[ 3 ].Position.Y = fy + h;
 				this.cvTransformedColoredVertexies[ 3 ].Position.Z = depth;
 				this.cvTransformedColoredVertexies[ 3 ].Position.W = 1.0f;
 				this.cvTransformedColoredVertexies[ 3 ].Color = color;
@@ -507,7 +507,7 @@ namespace FDK
 
 				int n描画領域内X = x + ( rc画像内の描画領域.Width / 2 );
 				int n描画領域内Y = y + ( rc画像内の描画領域.Height / 2 );
-				var vc3移動量 = new Vector3( n描画領域内X - ( ( (float) device.Viewport.Width ) / 2f ), -( n描画領域内Y - ( ( (float) device.Viewport.Height ) / 2f ) ), 0f );
+				var vc3移動量 = new Vector3( n描画領域内X - ( (float) SampleFramework.GameWindowSize.Width / 2f ), -( n描画領域内Y - ( (float) SampleFramework.GameWindowSize.Height / 2f ) ), 0f );
 				
 				var matrix = Matrix.Identity * Matrix.Scaling( this.vcScaleRatio );
 				matrix *= Matrix.RotationZ( this.fZAxisRotation );

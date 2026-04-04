@@ -485,7 +485,7 @@ namespace DTXMania
                 this.bマウスカーソル表示中 = false;
             }
             this.Device.SetTransform(TransformState.View, Matrix.LookAtLH(new Vector3(0f, 0f, (float)(-SampleFramework.GameWindowSize.Height / 2 * Math.Sqrt(3.0))), new Vector3(0f, 0f, 0f), new Vector3(0f, 1f, 0f)));
-            this.Device.SetTransform(TransformState.Projection, Matrix.PerspectiveFovLH(CConversion.DegreeToRadian((float)60f), ((float)this.Device.Viewport.Width) / ((float)this.Device.Viewport.Height), -100f, 100f));
+            this.Device.SetTransform(TransformState.Projection, Matrix.PerspectiveFovLH(CConversion.DegreeToRadian((float)60f), ((float)SampleFramework.GameWindowSize.Width) / ((float)SampleFramework.GameWindowSize.Height), -100f, 100f));
             this.Device.SetRenderState(RenderState.Lighting, false);
             this.Device.SetRenderState(RenderState.ZEnable, false);
             this.Device.SetRenderState(RenderState.AntialiasedLineEnable, false);
@@ -561,7 +561,14 @@ namespace DTXMania
                 InputManager.tPolling(this.bApplicationActive, CDTXMania.ConfigIni.bバッファ入力を行う);
 
             if (FPS != null)
+            {
                 FPS.tカウンタ更新();
+                if (FPS.bFPSの値が変化した)
+                {
+                    base.Window.Text = string.Format("{0}  [{1} fps | {2:0.0}ms]",
+                        this.strWindowTitle, FPS.n現在のFPS, FPS.dbCurrentFrameTimeMs);
+                }
+            }
 
             //if( Pad != null )					ポーリング時にクリアしたらダメ！曲の開始時に1回だけクリアする。(2010.9.11)
             //	Pad.stDetectedDevice.Clear();
@@ -2322,8 +2329,8 @@ for (int i = 0; i < 3; i++) {
             {
                 settings.Windowed = true;								// #30666 2013.2.2 yyagi: Fullscreenmode is "Maximized window" mode
             }
-            settings.BackBufferWidth = SampleFramework.GameWindowSize.Width;
-            settings.BackBufferHeight = SampleFramework.GameWindowSize.Height;
+            settings.BackBufferWidth = ConfigIni.nウインドウwidth;
+            settings.BackBufferHeight = ConfigIni.nウインドウheight;
             //			settings.BackBufferCount = 3;
             settings.EnableVSync = ConfigIni.bVerticalSyncWait;
             //			settings.BackBufferFormat = Format.A8R8G8B8;
@@ -2347,6 +2354,54 @@ for (int i = 0; i < 3; i++) {
             //			base.TargetElapsedTime = TimeSpan.FromTicks( 10000000 / 75 );
             base.Window.ClientSize = new Size(ConfigIni.nウインドウwidth, ConfigIni.nウインドウheight);	// #23510 2010.10.31 yyagi: to recover window size. width and height are able to get from Config.ini.
             base.InactiveSleepTime = TimeSpan.FromMilliseconds((float)(ConfigIni.n非フォーカス時スリープms));	// #23568 2010.11.3 yyagi: to support valiable sleep value when !IsActive
+
+            #region [ Log graphics device info ]
+            try
+            {
+                var d3dDevice = base.GraphicsDeviceManager.Direct3D9.Device;
+                var adapterOrdinal = d3dDevice.CreationParameters.AdapterOrdinal;
+                var adapterIdentifier = d3dDevice.Direct3D.GetAdapterIdentifier(adapterOrdinal);
+                var presentParams = base.GraphicsDeviceManager.CurrentSettings;
+                Trace.TraceInformation("----------------------");
+                Trace.TraceInformation("■ Graphics Device Info");
+                Trace.TraceInformation("  Adapter: {0}", adapterIdentifier.Description);
+                Trace.TraceInformation("  Driver: {0} ({1})", adapterIdentifier.Driver, adapterIdentifier.DriverVersion);
+                Trace.TraceInformation("  BackBuffer: {0}x{1}", presentParams.BackBufferWidth, presentParams.BackBufferHeight);
+                Trace.TraceInformation("  Windowed: {0}", presentParams.Windowed);
+                Trace.TraceInformation("  VSync: {0}", ConfigIni.bVerticalSyncWait);
+                Trace.TraceInformation("  Window Size: {0}x{1}", ConfigIni.nウインドウwidth, ConfigIni.nウインドウheight);
+                Trace.TraceInformation("  FullScreenExclusive: {0}", ConfigIni.bFullScreenExclusive);
+                Trace.TraceInformation("  Process: {0}", Environment.Is64BitProcess ? "x64" : "x86");
+                Trace.TraceInformation("----------------------");
+            }
+            catch (Exception ex)
+            {
+                Trace.TraceWarning("Failed to log graphics device info: {0}", ex.Message);
+            }
+            #endregion
+
+            #region [ Initialize resolution scaling ]
+            //---------------------
+            {
+                // Use actual backbuffer size (may differ from config if display caps the window)
+                var presentSettings = base.GraphicsDeviceManager.CurrentSettings;
+                int physW = presentSettings.BackBufferWidth;
+                int physH = presentSettings.BackBufferHeight;
+                int logW = SampleFramework.GameWindowSize.Width;
+                int logH = SampleFramework.GameWindowSize.Height;
+                FDK.CTexture.szLogicalScreen = new Size(logW, logH);
+                FDK.CTexture.szPhysicalScreen = new Size(physW, physH);
+                FDK.CTexture.fScreenRatio = (float)physH / (float)logH;
+                // Center the logical area within the physical area (for non-matching aspect ratios)
+                int scaledW = (int)(logW * FDK.CTexture.fScreenRatio);
+                int offsetX = (physW - scaledW) / 2;
+                FDK.CTexture.rcPhysicalScreenDrawingArea = new System.Drawing.Rectangle(offsetX, 0, scaledW, physH);
+                Trace.TraceInformation("Resolution scaling: logical={0}x{1}, physical={2}x{3}, ratio={4:F3}, offsetX={5}",
+                    logW, logH, physW, physH, FDK.CTexture.fScreenRatio, offsetX);
+            }
+            //---------------------
+            #endregion
+
             // #23568 2010.11.4 ikanick changed ( 1 -> ConfigIni )
             if (!ConfigIni.bFullScreenExclusive)
             {
