@@ -1,0 +1,42 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-debug-x64",
+            "type": "shell",
+            "command": "& 'C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe' '${workspaceFolder}\\DTXMania.sln' /t:DTXMania /p:Configuration=Debug /p:Platform=x64 /m /v:minimal /restore",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            }
+        },
+        {
+            "label": "build-release-x64",
+            "type": "shell",
+            "command": "& 'C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe' '${workspaceFolder}\\DTXMania.sln' /t:DTXMania /p:Configuration=Release /p:Platform=x64 /m /v:minimal /restore",
+            "group": "build",
+            "problemMatcher": "$msCompile",
+            "presentation": {
+                "reveal": "silent",
+                "revealProblems": "onProblem"
+            }
+        },
+        {
+            "label": "clean",
+            "type": "shell",
+            "command": "& 'C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe' '${workspaceFolder}\\DTXMania.sln' /t:Clean /p:Configuration=Debug /p:Platform=x64 /v:minimal",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "restore",
+            "type": "shell",
+            "command": "${workspaceFolder}\\nuget.exe restore ${workspaceFolder}\\DTXMania.sln",
+            "problemMatcher": []
+        }
+    ]
+}

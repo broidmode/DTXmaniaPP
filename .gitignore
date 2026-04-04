@@ -183,19 +183,48 @@ UpgradeLog*.htm
 # Microsoft Fakes
 FakesAssemblies/
 
+# NuGet CLI
+nuget.exe
+
 # LightSwitch generated files
 GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
 
-# DTX songs
+# DTX songs (legacy Japanese path)
 実行時フォルダ/Songs/*
 
-# DTX specific files
+# DTX specific files (legacy Japanese path)
 実行時フォルダ/config.ini
 実行時フォルダ/dtxmanialog.txt
 実行時フォルダ/songlist.db
 実行時フォルダ/songs.db
 
+# Runtime — user content and generated files
+Runtime/DTXFiles/
+Runtime/DTXManiaLog.txt
+Runtime/songlist.db
+Runtime/songs.db
+Runtime/stderr.log
+Runtime/Plugins/
+
+# Runtime — skins (keep only the default Graphics/Sounds)
+Runtime/System/[0-9]*/
+
+# Runtime — build output (binaries rebuilt from source)
+Runtime/DTXManiaNX.exe
+Runtime/DTXManiaNX.pdb
+Runtime/DTXCreator.exe
+Runtime/dll/FDK.dll
+Runtime/dll/FDK.pdb
+Runtime/dll/libbjxa.dll
+Runtime/dll/libbjxa.pdb
+Runtime/dll/Newtonsoft.Json.dll
+Runtime/dll/Newtonsoft.Json.xml
+Runtime/dll/DiscordRPC.dll
+Runtime/dll/DiscordRPC.xml
+Runtime/dll/DiscordRPC.pdb
+
+# For now don't track .github and docs
 .github
 docs/*

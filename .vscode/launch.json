@@ -1,0 +1,21 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "DTXMania (Debug x64)",
+            "type": "clr",
+            "request": "launch",
+            "preLaunchTask": "build-debug-x64",
+            "program": "${workspaceFolder}/Runtime/DTXManiaNX.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/Runtime",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
+        {
+            "name": "DTXMania (Attach)",
+            "type": "clr",
+            "request": "attach"
+        }
+    ]
+}
