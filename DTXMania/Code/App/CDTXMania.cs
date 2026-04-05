@@ -299,6 +299,11 @@ namespace DTXMania
             get;
             set;
         }
+        public bool b次のタイミングで解像度キリカエを行う
+        {
+            get;
+            set;
+        }
 
         public Device Device
         {
@@ -1775,9 +1780,35 @@ for (int i = 0; i < 3; i++) {
                 }
             }
             #endregion
+            #region [ 解像度切り替え ]
+            if (this.b次のタイミングで解像度キリカエを行う)
+            {
+                int nNewWidth = CConfigIni.nResolutionWidths[ConfigIni.nResolution];
+                int nNewHeight = CConfigIni.nResolutionHeights[ConfigIni.nResolution];
+                ConfigIni.nウインドウwidth = nNewWidth;
+                ConfigIni.nウインドウheight = nNewHeight;
+
+                DeviceSettings ds = app.GraphicsDeviceManager.CurrentSettings;
+                ds.BackBufferWidth = nNewWidth;
+                ds.BackBufferHeight = nNewHeight;
+                app.GraphicsDeviceManager.ChangeDevice(ds);
+
+                base.Window.ClientSize = new Size(nNewWidth, nNewHeight);
+
+                // Recalculate resolution scaling
+                int logW = SampleFramework.GameWindowSize.Width;
+                int logH = SampleFramework.GameWindowSize.Height;
+                FDK.CTexture.szPhysicalScreen = new Size(nNewWidth, nNewHeight);
+                FDK.CTexture.fScreenRatio = (float)nNewHeight / (float)logH;
+                int scaledW = (int)(logW * FDK.CTexture.fScreenRatio);
+                int offsetX = (nNewWidth - scaledW) / 2;
+                FDK.CTexture.rcPhysicalScreenDrawingArea = new System.Drawing.Rectangle(offsetX, 0, scaledW, nNewHeight);
+                Trace.TraceInformation("Resolution changed: {0}x{1}, ratio={2:F3}", nNewWidth, nNewHeight, FDK.CTexture.fScreenRatio);
+
+                this.b次のタイミングで解像度キリカエを行う = false;
+            }
+            #endregion
         }
-
-
         // Other
 
 		#region [ 汎用ヘルパー ]

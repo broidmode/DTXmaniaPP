@@ -727,8 +727,12 @@ namespace DTXMania
                         {
                             //ShowProgressByFilename(CDTXMania.DTX.listWAV[nWAVcount].strFilename);
                         }
-                        int looptime = (CDTXMania.ConfigIni.bVerticalSyncWait) ? 3 : 1;	// VSyncWait=ON時は1frame(1/60s)あたり3つ読むようにする
-                        for (int i = 0; i < looptime && nWAVcount <= CDTXMania.DTX.listWAV.Count; i++)
+                        // Time-budget loading: load WAVs for up to 12ms per frame, then yield to keep
+                        // the loading screen responsive. Frame-rate independent (replaces old per-frame
+                        // count that assumed 60 FPS).
+                        var swLoad = Stopwatch.StartNew();
+                        const long nLoadBudgetMs = 12;
+                        while (nWAVcount <= CDTXMania.DTX.listWAV.Count && swLoad.ElapsedMilliseconds < nLoadBudgetMs)
                         {
                             if (CDTXMania.DTX.listWAV[nWAVcount].listこのWAVを使用するチャンネル番号の集合.Count > 0)	// #28674 2012.5.8 yyagi
                             {

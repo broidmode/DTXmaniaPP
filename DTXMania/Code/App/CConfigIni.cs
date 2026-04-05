@@ -681,6 +681,9 @@ namespace DTXMania
 	    public int n初期ウィンドウ開始位置Y;
 		public int nウインドウwidth;				// #23510 2010.10.31 yyagi add
 		public int nウインドウheight;				// #23510 2010.10.31 yyagi add
+		public int nResolution;					// 0=720p, 1=1080p, 2=1440p, 3=2160p
+		public static readonly int[] nResolutionHeights = { 720, 1080, 1440, 2160 };
+		public static readonly int[] nResolutionWidths = { 1280, 1920, 2560, 3840 };
         public bool DisplayBonusEffects;
         public bool bHAZARD;
         public int nSoundDeviceType; // #24820 2012.12.23 yyagi 出力サウンドデバイス(0=ACM(にしたいが設計がきつそうならDirectShow), 1=ASIO, 2=WASAPI)
@@ -1270,6 +1273,7 @@ namespace DTXMania
 			this.nフレーム毎スリープms = -1;			// #xxxxx 2011.11.27 yyagi add
 			this.nTargetFrameRate = 0;				// 0=unlimited/VSync-limited
 			this.bGPUFlushBeforePresent = true;
+			this.nResolution = 0;					// Default to 720p; tApplyResolutionPreset() sets width/height
 			this.n非フォーカス時スリープms = 1;			// #23568 2010.11.04 ikanick add
 			this._bGuitar有効 = false;
 			this._bDrums有効 = true;
@@ -1652,6 +1656,9 @@ namespace DTXMania
 			sw.WriteLine("; ウインドウモード時の画面高さ");				//
 			sw.WriteLine("; A height size in the window mode.");		//
 			sw.WriteLine("WindowHeight={0}", this.nウインドウheight);	//
+			sw.WriteLine();												//
+			sw.WriteLine("; Resolution preset (0=720p, 1=1080p, 2=1440p, 3=2160p)");
+			sw.WriteLine("Resolution={0}", this.nResolution);
 			sw.WriteLine();												//
             sw.WriteLine("; ウィンドウモード時の位置X");				            // #30675 2013.02.04 ikanick add
             sw.WriteLine("; X position in the window mode.");			            //
@@ -2787,6 +2794,12 @@ namespace DTXMania
                                                 {
                                                     this.nウインドウheight = SampleFramework.GameWindowSize.Height;
                                                 }
+                                            }
+                                            else if (str3.Equals("Resolution"))
+                                            {
+                                                this.nResolution = CConversion.nGetNumberIfInRange(str4, 0, nResolutionHeights.Length - 1, this.nResolution);
+                                                this.nウインドウwidth = nResolutionWidths[this.nResolution];
+                                                this.nウインドウheight = nResolutionHeights[this.nResolution];
                                             }
                                             else if (str3.Equals("WindowX"))		// #30675 2013.02.04 ikanick add
                                             {

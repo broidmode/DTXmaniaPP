@@ -173,6 +173,12 @@ namespace DTXMania
                 "Fullscreen mode or window mode.");
             this.listItems.Add(this.iSystemFullscreen);
 
+            this.iSystemResolution = new CItemList("Resolution", CItemBase.EPanelType.Normal, CDTXMania.ConfigIni.nResolution,
+                "画面解像度を選択します。\n16:9固定です。",
+                "Select display resolution.\nAll options are 16:9.",
+                new string[] { "720p", "1080p", "1440p", "4K" });
+            this.listItems.Add(this.iSystemResolution);
+
             this.iSystemStageFailed = new CItemToggle("StageFailed", CDTXMania.ConfigIni.bSTAGEFAILEDEnabled,
                 "ONにするとゲージが\n" +
                 "なくなった時にSTAGE FAILED" +
@@ -1787,6 +1793,11 @@ namespace DTXMania
                 {
                     CDTXMania.ConfigIni.bGPUFlushBeforePresent = this.iSystemGPUFlushBeforePresent.bON;
                 }
+                else if (this.listItems[this.nCurrentSelection] == this.iSystemResolution)
+                {
+                    CDTXMania.ConfigIni.nResolution = this.iSystemResolution.n現在選択されている項目番号;
+                    CDTXMania.app.b次のタイミングで解像度キリカエを行う = true;
+                }
                 #region [ AutoPlay #23886 2012.5.8 yyagi ]
                 else if (this.listItems[this.nCurrentSelection] == this.iDrumsAutoPlayAll)
                 {
@@ -2379,6 +2390,11 @@ namespace DTXMania
             if (this.listItems[this.nCurrentSelection] == this.iSystemMasterVolume)              // #33700 2014.4.26 yyagi
             {
                 CDTXMania.SoundManager.nMasterVolume = this.iSystemMasterVolume.nCurrentValue;
+            }
+            else if (this.listItems[this.nCurrentSelection] == this.iSystemResolution)
+            {
+                CDTXMania.ConfigIni.nResolution = this.iSystemResolution.n現在選択されている項目番号;
+                CDTXMania.app.b次のタイミングで解像度キリカエを行う = true;
             }
         }
 
@@ -3027,6 +3043,7 @@ namespace DTXMania
         private CItemToggle iSystemFillIn;
         private CItemList iSystemFTGroup;
         private CItemToggle iSystemFullscreen;
+        private CItemList iSystemResolution;
         private CItemList iSystemHHGroup;
         private CItemList iSystemBDGroup;		// #27029 2012.1.4 from
         private CItemToggle iSystemHitSound;
@@ -3292,7 +3309,12 @@ namespace DTXMania
                 CDTXMania.app.b次のタイミングで全画面_ウィンドウ切り替えを行う = true;
                 //Since actual value has changed, the UI should also reflect this
                 this.iSystemFullscreen.bON = !this.iSystemFullscreen.bON;
-            }            
+            }
+            if (this.iSystemResolution.n現在選択されている項目番号 != CDTXMania.ConfigIni.nResolution)
+            {
+                CDTXMania.ConfigIni.nResolution = this.iSystemResolution.n現在選択されている項目番号;
+                CDTXMania.app.b次のタイミングで解像度キリカエを行う = true;
+            }
             this.iSystemStageFailed.bON = CDTXMania.ConfigIni.bSTAGEFAILEDEnabled;
             this.iSystemRandomFromSubBox.bON = CDTXMania.ConfigIni.bランダムセレクトで子BOXを検索対象とする;
 
@@ -3539,6 +3561,7 @@ namespace DTXMania
             //this.iSystemDrums.bON;
 
             CDTXMania.ConfigIni.bFullScreenMode = this.iSystemFullscreen.bON;
+            CDTXMania.ConfigIni.nResolution = this.iSystemResolution.n現在選択されている項目番号;
             CDTXMania.ConfigIni.bSTAGEFAILEDEnabled = this.iSystemStageFailed.bON;
             CDTXMania.ConfigIni.bランダムセレクトで子BOXを検索対象とする = this.iSystemRandomFromSubBox.bON;
 
