@@ -355,12 +355,11 @@ namespace DTXMania
         {
             if (ConfigIni != null)
             {
-                if (ConfigIni.bFullScreenMode)	// #23510 2010.10.27 yyagi: backup current window size before going fullscreen mode
+                if (ConfigIni.bFullScreenMode)	// Entering fullscreen: backup current window size
                 {
                     currentClientSize = this.Window.ClientSize;
                     ConfigIni.nウインドウwidth = this.Window.ClientSize.Width;
                     ConfigIni.nウインドウheight = this.Window.ClientSize.Height;
-                    //FDK.CTaskBar.ShowTaskBar( false );
                 }
 
                 if (ConfigIni.bFullScreenExclusive)
@@ -371,32 +370,53 @@ namespace DTXMania
                     {
                         settings.Windowed = ConfigIni.bWindowMode;
                         base.GraphicsDeviceManager.ChangeDevice(settings);
-                        if (ConfigIni.bWindowMode)    // #23510 2010.10.27 yyagi: to resume window size from backuped value
+                        if (ConfigIni.bWindowMode)
                         {
                             base.Window.ClientSize = new Size(currentClientSize.Width, currentClientSize.Height);
-                            //FDK.CTaskBar.ShowTaskBar( true );
                         }
                     }
                 }
                 else
                 {
-                    // Only use windows maximized/restored sizes
-                    if (ConfigIni.bWindowMode)    // #23510 2010.10.27 yyagi: to resume window size from backuped value
+                    // Borderless fullscreen: cover the entire screen, resize backbuffer to match
+                    if (ConfigIni.bWindowMode)
                     {
-                        // #30666 2013.2.2 yyagi Don't use Fullscreen mode becasue NVIDIA GeForce is
-                        // tend to delay drawing on Fullscreen mode. So DTXMania uses Maximized window
-                        // in spite of using fullscreen mode.
+                        // Returning to windowed mode
                         app.Window.WindowState = FormWindowState.Normal;
                         app.Window.FormBorderStyle = FormBorderStyle.Sizable;
                         app.Window.WindowState = FormWindowState.Normal;
-                        base.Window.ClientSize = new Size(currentClientSize.Width, currentClientSize.Height);
-                        //FDK.CTaskBar.ShowTaskBar( true );
+
+                        // Restore window size and backbuffer to the configured resolution
+                        int w = CConfigIni.nResolutionWidths[ConfigIni.nResolution];
+                        int h = CConfigIni.nResolutionHeights[ConfigIni.nResolution];
+                        ConfigIni.nウインドウwidth = w;
+                        ConfigIni.nウインドウheight = h;
+
+                        DeviceSettings ds = app.GraphicsDeviceManager.CurrentSettings;
+                        ds.BackBufferWidth = w;
+                        ds.BackBufferHeight = h;
+                        app.GraphicsDeviceManager.ChangeDevice(ds);
+                        base.Window.ClientSize = new Size(w, h);
+                        tRecalculateScreenScaling(w, h);
                     }
                     else
                     {
+                        // Entering borderless fullscreen
+                        var screen = System.Windows.Forms.Screen.FromControl(app.Window);
+                        int screenW = screen.Bounds.Width;
+                        int screenH = screen.Bounds.Height;
+
                         app.Window.WindowState = FormWindowState.Normal;
                         app.Window.FormBorderStyle = FormBorderStyle.None;
-                        app.Window.WindowState = FormWindowState.Maximized;
+                        app.Window.SetBounds(screen.Bounds.X, screen.Bounds.Y, screenW, screenH);
+
+                        // Resize backbuffer to match screen
+                        DeviceSettings ds = app.GraphicsDeviceManager.CurrentSettings;
+                        ds.BackBufferWidth = screenW;
+                        ds.BackBufferHeight = screenH;
+                        app.GraphicsDeviceManager.ChangeDevice(ds);
+                        tRecalculateScreenScaling(screenW, screenH);
+                        Trace.TraceInformation("Borderless fullscreen: {0}x{1}", screenW, screenH);
                     }
                     if (ConfigIni.bWindowMode)
                     {
@@ -1794,15 +1814,7 @@ for (int i = 0; i < 3; i++) {
                 app.GraphicsDeviceManager.ChangeDevice(ds);
 
                 base.Window.ClientSize = new Size(nNewWidth, nNewHeight);
-
-                // Recalculate resolution scaling
-                int logW = SampleFramework.GameWindowSize.Width;
-                int logH = SampleFramework.GameWindowSize.Height;
-                FDK.CTexture.szPhysicalScreen = new Size(nNewWidth, nNewHeight);
-                FDK.CTexture.fScreenRatio = (float)nNewHeight / (float)logH;
-                int scaledW = (int)(logW * FDK.CTexture.fScreenRatio);
-                int offsetX = (nNewWidth - scaledW) / 2;
-                FDK.CTexture.rcPhysicalScreenDrawingArea = new System.Drawing.Rectangle(offsetX, 0, scaledW, nNewHeight);
+                tRecalculateScreenScaling(nNewWidth, nNewHeight);
                 Trace.TraceInformation("Resolution changed: {0}x{1}, ratio={2:F3}", nNewWidth, nNewHeight, FDK.CTexture.fScreenRatio);
 
                 this.b次のタイミングで解像度キリカエを行う = false;
@@ -1813,6 +1825,17 @@ for (int i = 0; i < 3; i++) {
 
 		#region [ 汎用ヘルパー ]
 		//-----------------
+        private static void tRecalculateScreenScaling(int physW, int physH)
+        {
+            int logW = SampleFramework.GameWindowSize.Width;
+            int logH = SampleFramework.GameWindowSize.Height;
+            FDK.CTexture.szPhysicalScreen = new Size(physW, physH);
+            FDK.CTexture.fScreenRatio = (float)physH / (float)logH;
+            int scaledW = (int)(logW * FDK.CTexture.fScreenRatio);
+            int offsetX = (physW - scaledW) / 2;
+            FDK.CTexture.rcPhysicalScreenDrawingArea = new System.Drawing.Rectangle(offsetX, 0, scaledW, physH);
+        }
+
 		public static CTexture tGenerateTexture( string fileName )
 		{
 			return tGenerateTexture( fileName, false );
@@ -2433,21 +2456,14 @@ for (int i = 0; i < 3; i++) {
             #region [ Initialize resolution scaling ]
             //---------------------
             {
-                // Use actual backbuffer size (may differ from config if display caps the window)
                 var presentSettings = base.GraphicsDeviceManager.CurrentSettings;
                 int physW = presentSettings.BackBufferWidth;
                 int physH = presentSettings.BackBufferHeight;
-                int logW = SampleFramework.GameWindowSize.Width;
-                int logH = SampleFramework.GameWindowSize.Height;
-                FDK.CTexture.szLogicalScreen = new Size(logW, logH);
-                FDK.CTexture.szPhysicalScreen = new Size(physW, physH);
-                FDK.CTexture.fScreenRatio = (float)physH / (float)logH;
-                // Center the logical area within the physical area (for non-matching aspect ratios)
-                int scaledW = (int)(logW * FDK.CTexture.fScreenRatio);
-                int offsetX = (physW - scaledW) / 2;
-                FDK.CTexture.rcPhysicalScreenDrawingArea = new System.Drawing.Rectangle(offsetX, 0, scaledW, physH);
+                FDK.CTexture.szLogicalScreen = new Size(SampleFramework.GameWindowSize.Width, SampleFramework.GameWindowSize.Height);
+                tRecalculateScreenScaling(physW, physH);
                 Trace.TraceInformation("Resolution scaling: logical={0}x{1}, physical={2}x{3}, ratio={4:F3}, offsetX={5}",
-                    logW, logH, physW, physH, FDK.CTexture.fScreenRatio, offsetX);
+                    FDK.CTexture.szLogicalScreen.Width, FDK.CTexture.szLogicalScreen.Height,
+                    physW, physH, FDK.CTexture.fScreenRatio, FDK.CTexture.rcPhysicalScreenDrawingArea.X);
             }
             //---------------------
             #endregion
