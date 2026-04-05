@@ -728,6 +728,8 @@ namespace DTXMania
 
 		public int n非フォーカス時スリープms;       // #23568 2010.11.04 ikanick add
 		public int nフレーム毎スリープms;			// #xxxxx 2011.11.27 yyagi add
+		public int nTargetFrameRate;				// 0=unlimited/VSync-limited, otherwise target FPS
+		public bool bGPUFlushBeforePresent;		// GPU flush via occlusion query + DWM.Flush()
 		public int nPlaySpeed;
 		public bool bSaveScoreIfModifiedPlaySpeed;
 		public int n曲が選択されてからプレビュー音が鳴るまでのウェイトms;
@@ -1266,6 +1268,8 @@ namespace DTXMania
             this.nShutterOutSide = new STDGBVALUE<int>();
             this.nShutterOutSide.Drums = 0;
 			this.nフレーム毎スリープms = -1;			// #xxxxx 2011.11.27 yyagi add
+			this.nTargetFrameRate = 0;				// 0=unlimited/VSync-limited
+			this.bGPUFlushBeforePresent = true;
 			this.n非フォーカス時スリープms = 1;			// #23568 2010.11.04 ikanick add
 			this._bGuitar有効 = false;
 			this._bDrums有効 = true;
@@ -1678,6 +1682,14 @@ namespace DTXMania
             sw.WriteLine("; フレーム毎のsleep値[ms] (-1でスリープ無し, 0以上で毎フレームスリープ。動画キャプチャ等で活用下さい)");	// #xxxxx 2011.11.27 yyagi add
             sw.WriteLine("; A sleep time[ms] per frame.");							//
             sw.WriteLine("SleepTimePerFrame={0}", this.nフレーム毎スリープms); //
+            sw.WriteLine();
+            sw.WriteLine("; Target frame rate (0=unlimited/VSync-limited, 60/120/144/240=target FPS)");
+            sw.WriteLine("; When VSync is ON, this has no effect (VSync controls frame rate).");
+            sw.WriteLine("TargetFrameRate={0}", this.nTargetFrameRate);
+            sw.WriteLine();
+            sw.WriteLine("; GPU Flush before Present (0=OFF, 1=ON). Uses D3D9 occlusion query + DWM.Flush().");
+            sw.WriteLine("; Reduces input lag but may hurt throughput at very high frame rates.");
+            sw.WriteLine("GPUFlushBeforePresent={0}", this.bGPUFlushBeforePresent ? 1 : 0);
             sw.WriteLine();											        			//
             #endregion
             #region [ WASAPI/ASIO関連 ]
@@ -2866,6 +2878,14 @@ namespace DTXMania
                                             else if (str3.Equals("SleepTimePerFrame"))		// #23568 2011.11.27 yyagi
                                             {
                                                 this.nフレーム毎スリープms = CConversion.nRoundToRange(str4, -1, 50, this.nフレーム毎スリープms);
+                                            }
+                                            else if (str3.Equals("TargetFrameRate"))
+                                            {
+                                                this.nTargetFrameRate = CConversion.nGetNumberIfInRange(str4, 0, 1000, this.nTargetFrameRate);
+                                            }
+                                            else if (str3.Equals("GPUFlushBeforePresent"))
+                                            {
+                                                this.bGPUFlushBeforePresent = CConversion.bONorOFF(str4[0]);
                                             }
                                             else if (str3.Equals("Guitar"))
                                             {

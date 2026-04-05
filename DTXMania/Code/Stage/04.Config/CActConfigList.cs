@@ -207,6 +207,30 @@ namespace DTXMania
                 "Turn ON to wait VSync (Vertical Synchronizing signal) at every drawing (so FPS becomes 60)\nIf you have enough CPU/GPU power, the scrolling would become smooth.");
             this.listItems.Add(this.iSystemVSyncWait);
 
+            this.iSystemTargetFrameRate = new CItemInteger("TargetFrameRate", 0, 1000, CDTXMania.ConfigIni.nTargetFrameRate,
+                "ターゲットフレームレート：\n" +
+                "0にするとVSyncまたは無制限、\n" +
+                "1～1000で目標FPSを指定します。\n" +
+                "VSyncWaitがOFFの時のみ有効です。",
+                "Target frame rate:\n" +
+                "0 = VSync-limited or unlimited.\n" +
+                "1-1000 = target FPS cap.\n" +
+                "Only effective when VSyncWait is OFF.");
+            this.listItems.Add(this.iSystemTargetFrameRate);
+
+            this.iSystemGPUFlushBeforePresent = new CItemToggle("GPUFlush", CDTXMania.ConfigIni.bGPUFlushBeforePresent,
+                "GPUフラッシュ：\n" +
+                "画面表示前にGPUフラッシュを\n" +
+                "行い、表示タイミングの安定化\n" +
+                "を図ります。\n" +
+                "問題がなければONのままに\n" +
+                "してください。",
+                "GPU Flush Before Present:\n" +
+                "Flushes GPU before presentation\n" +
+                "for more stable frame delivery.\n" +
+                "Leave ON unless you experience issues.");
+            this.listItems.Add(this.iSystemGPUFlushBeforePresent);
+
             this.iSystemAVI = new CItemToggle("AVI", CDTXMania.ConfigIni.bAVIEnabled,
                 "AVIの使用：\n動画(AVI)を再生可能にする場合に\nON にします。AVI の再生には、それ\nなりのマシンパワーが必要とされます。",
                 "Turn ON to enable video (AVI) playback.\nThis requires some processing power.");
@@ -1759,6 +1783,10 @@ namespace DTXMania
                     CDTXMania.ConfigIni.bVerticalSyncWait = this.iSystemVSyncWait.bON;
                     CDTXMania.app.b次のタイミングで垂直帰線同期切り替えを行う = true;
                 }
+                else if (this.listItems[this.nCurrentSelection] == this.iSystemGPUFlushBeforePresent)
+                {
+                    CDTXMania.ConfigIni.bGPUFlushBeforePresent = this.iSystemGPUFlushBeforePresent.bON;
+                }
                 #region [ AutoPlay #23886 2012.5.8 yyagi ]
                 else if (this.listItems[this.nCurrentSelection] == this.iDrumsAutoPlayAll)
                 {
@@ -3022,6 +3050,8 @@ namespace DTXMania
         private CItemToggle iSystemStageEffect;
         private CItemToggle iSystemStoicMode;
         private CItemToggle iSystemVSyncWait;
+        private CItemInteger iSystemTargetFrameRate;
+        private CItemToggle iSystemGPUFlushBeforePresent;
         private CItemList iSystemShowLag;					// #25370 2011.6.3 yyagi
         private CItemList iSystemShowLagColor;
         private CItemToggle iSystemShowLagHitCount;         // fisyher new config item
@@ -3272,6 +3302,8 @@ namespace DTXMania
                 CDTXMania.app.b次のタイミングで垂直帰線同期切り替えを行う = true;
             }            
             this.iSystemVSyncWait.bON = CDTXMania.ConfigIni.bVerticalSyncWait;
+            this.iSystemTargetFrameRate.nCurrentValue = CDTXMania.ConfigIni.nTargetFrameRate;
+            this.iSystemGPUFlushBeforePresent.bON = CDTXMania.ConfigIni.bGPUFlushBeforePresent;
             this.iSystemBufferedInput.bON = CDTXMania.ConfigIni.bバッファ入力を行う;
             this.iSystemAVI.bON = CDTXMania.ConfigIni.bAVIEnabled;
             this.iSystemBGA.bON = CDTXMania.ConfigIni.bBGAEnabled; 
@@ -3512,6 +3544,8 @@ namespace DTXMania
 
             CDTXMania.ConfigIni.bWave再生位置自動調整機能有効 = this.iSystemAdjustWaves.bON;
             CDTXMania.ConfigIni.bVerticalSyncWait = this.iSystemVSyncWait.bON;
+            CDTXMania.ConfigIni.nTargetFrameRate = this.iSystemTargetFrameRate.nCurrentValue;
+            CDTXMania.ConfigIni.bGPUFlushBeforePresent = this.iSystemGPUFlushBeforePresent.bON;
             CDTXMania.ConfigIni.bバッファ入力を行う = this.iSystemBufferedInput.bON;
             CDTXMania.ConfigIni.bAVIEnabled = this.iSystemAVI.bON;
             CDTXMania.ConfigIni.bBGAEnabled = this.iSystemBGA.bON;

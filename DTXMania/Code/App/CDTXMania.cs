@@ -580,11 +580,26 @@ namespace DTXMania
                 CPowerManagement.tDisableMonitorSuspend();
 
             // #xxxxx 2013.4.8 yyagi; sleepの挿入位置を、EndScnene～Present間から、BeginScene前に移動。描画遅延を小さくするため。
-            #region [ スリープ ]
-            if (ConfigIni.nフレーム毎スリープms >= 0)			// #xxxxx 2011.11.27 yyagi
+            #region [ Frame pacing / sleep ]
+            if (ConfigIni.nTargetFrameRate > 0 && !ConfigIni.bVerticalSyncWait)
+            {
+                // Spin-wait frame pacer: precise frame timing when VSync is off
+                long nTargetFrameTimeTicks = System.Diagnostics.Stopwatch.Frequency / ConfigIni.nTargetFrameRate;
+                while (swFramePacer.ElapsedTicks < nTargetFrameTimeTicks)
+                {
+                    long remainingTicks = nTargetFrameTimeTicks - swFramePacer.ElapsedTicks;
+                    long remainingMs = remainingTicks * 1000 / System.Diagnostics.Stopwatch.Frequency;
+                    if (remainingMs > 2)
+                        Thread.Sleep(1);    // coarse wait to avoid burning CPU
+                    else
+                        Thread.SpinWait(100);   // spin for sub-ms precision
+                }
+            }
+            else if (ConfigIni.nフレーム毎スリープms >= 0)
             {
                 Thread.Sleep(ConfigIni.nフレーム毎スリープms);
             }
+            swFramePacer.Restart();
             #endregion
 
             #region [ DTXCreator/DTX2WAVからの指示 ]
@@ -1733,7 +1748,8 @@ for (int i = 0; i < 3; i++) {
             this.Device.EndScene();			// Present()は game.csのOnFrameEnd()に登録された、GraphicsDeviceManager.game_FrameEnd() 内で実行されるので不要
             // (つまり、Present()は、Draw()完了後に実行される)
 #if !GPUFlushAfterPresent
-            actFlushGPU.OnUpdateAndDraw();		// Flush GPU	// EndScene()～Present()間 (つまりVSync前) でFlush実行
+            if (ConfigIni.bGPUFlushBeforePresent)
+                actFlushGPU.OnUpdateAndDraw();		// Flush GPU	// EndScene()～Present()間 (つまりVSync前) でFlush実行
 #endif
             #region [ 全画面_ウインドウ切り替え ]
             if (this.b次のタイミングで全画面_ウィンドウ切り替えを行う)
@@ -1926,6 +1942,7 @@ for (int i = 0; i < 3; i++) {
         public int nUpdateAndDrawReturnValue;
         private MouseButtons mb = System.Windows.Forms.MouseButtons.Left;
         private string strWindowTitle = "";
+        private static readonly System.Diagnostics.Stopwatch swFramePacer = System.Diagnostics.Stopwatch.StartNew();
 
         //
         public CIMEHook cIMEHook;
@@ -2369,6 +2386,8 @@ for (int i = 0; i < 3; i++) {
                 Trace.TraceInformation("  BackBuffer: {0}x{1}", presentParams.BackBufferWidth, presentParams.BackBufferHeight);
                 Trace.TraceInformation("  Windowed: {0}", presentParams.Windowed);
                 Trace.TraceInformation("  VSync: {0}", ConfigIni.bVerticalSyncWait);
+                Trace.TraceInformation("  TargetFrameRate: {0}", ConfigIni.nTargetFrameRate == 0 ? "unlimited" : ConfigIni.nTargetFrameRate.ToString());
+                Trace.TraceInformation("  GPUFlush: {0}", ConfigIni.bGPUFlushBeforePresent);
                 Trace.TraceInformation("  Window Size: {0}x{1}", ConfigIni.nウインドウwidth, ConfigIni.nウインドウheight);
                 Trace.TraceInformation("  FullScreenExclusive: {0}", ConfigIni.bFullScreenExclusive);
                 Trace.TraceInformation("  Process: {0}", Environment.Is64BitProcess ? "x64" : "x86");
@@ -2440,8 +2459,8 @@ for (int i = 0; i < 3; i++) {
             Trace.Indent();
             try
             {
-                Timer = new CTimer(CTimer.EType.MultiMedia);
-                Trace.TraceInformation("タイマの初期化を完了しました。");
+                Timer = new CTimer(CTimer.EType.PerformanceCounter);
+                Trace.TraceInformation("タイマの初期化を完了しました。(PerformanceCounter)");
             }
             finally
             {
