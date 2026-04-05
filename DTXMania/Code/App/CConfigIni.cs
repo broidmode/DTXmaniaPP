@@ -4,7 +4,7 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Diagnostics;
-using System.Web;
+using System.Net;
 using FDK;
 
 using SlimDXKey = SlimDX.DirectInput.Key;
@@ -1627,7 +1627,7 @@ namespace DTXMania
 			Uri uriRoot = new Uri( System.IO.Path.Combine( CDTXMania.strEXEのあるフォルダ, "System" + System.IO.Path.DirectorySeparatorChar ) );
 			Uri uriPath = new Uri( System.IO.Path.Combine( this.strSystemSkinSubfolderFullName, "." + System.IO.Path.DirectorySeparatorChar ) );
 			string relPath = uriRoot.MakeRelativeUri( uriPath ).ToString();				// 相対パスを取得
-			relPath = System.Web.HttpUtility.UrlDecode( relPath );						// デコードする
+			relPath = System.Net.WebUtility.UrlDecode( relPath );						// デコードする
 			relPath = relPath.Replace( '/', System.IO.Path.DirectorySeparatorChar );	// 区切り文字が\ではなく/なので置換する
 			#endregion
 			sw.WriteLine( "; 使用するSkinのフォルダ名。" );
@@ -2722,7 +2722,7 @@ namespace DTXMania
 													absSkinPath = System.IO.Path.Combine( absSkinPath, str4 );
 													Uri u = new Uri( absSkinPath );
 													absSkinPath = u.AbsolutePath.ToString();	// str4内に相対パスがある場合に備える
-													absSkinPath = System.Web.HttpUtility.UrlDecode( absSkinPath );						// デコードする
+													absSkinPath = System.Net.WebUtility.UrlDecode( absSkinPath );						// デコードする
 													absSkinPath = absSkinPath.Replace( '/', System.IO.Path.DirectorySeparatorChar );	// 区切り文字が\ではなく/なので置換する
 												}
 												if ( absSkinPath[ absSkinPath.Length - 1 ] != System.IO.Path.DirectorySeparatorChar )	// フォルダ名末尾に\を必ずつけて、CSkin側と表記を統一する

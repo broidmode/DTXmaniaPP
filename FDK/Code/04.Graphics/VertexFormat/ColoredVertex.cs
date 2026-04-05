@@ -24,7 +24,9 @@ using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 
 namespace FDK {
     /// <summary>

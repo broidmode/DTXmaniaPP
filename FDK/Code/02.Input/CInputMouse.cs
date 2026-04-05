@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
-using SharpDX;
-using SharpDX.DirectInput;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.DirectInput;
 
 namespace FDK
 {
@@ -23,11 +25,12 @@ namespace FDK
 			this.ID = 0;
 			try
 			{
-				this.devMouse = new Mouse(directInput);
+				this.devMouse = directInput.CreateDevice(DeviceGuid.SysMouse);
+				this.devMouse.SetDataFormat<RawMouseState>();
 				this.devMouse.SetCooperativeLevel(hWnd, CooperativeLevel.Foreground | CooperativeLevel.NonExclusive);
 				this.devMouse.Properties.BufferSize = 0x20;
-				Trace.TraceInformation(this.devMouse.Information.ProductName.Trim(new char[] { '\0' }) + " を生成しました。");  // なぜか0x00のゴミが出るので削除
-				this.strDeviceName = this.devMouse.Information.ProductName.Trim(new char[] { '\0' });
+				Trace.TraceInformation(this.devMouse.DeviceInfo.ProductName.Trim(new char[] { '\0' }) + " を生成しました。");  // なぜか0x00のゴミが出るので削除
+				this.strDeviceName = this.devMouse.DeviceInfo.ProductName.Trim(new char[] { '\0' });
 			}
 			catch
 			{
@@ -85,7 +88,7 @@ namespace FDK
 				{
 					#region [ a.バッファ入力 ]
 					//-----------------------------
-					var bufferedData = this.devMouse.GetBufferedData();
+					var bufferedData = this.devMouse.GetBufferedMouseData();
 					//if( Result.Last.IsSuccess && bufferedData != null )
 					{
 						foreach (MouseUpdate data in bufferedData)
@@ -145,7 +148,7 @@ namespace FDK
 				{
 					#region [ b.状態入力 ]
 					//-----------------------------
-					MouseState currentState = this.devMouse.GetCurrentState();
+					MouseState currentState = this.devMouse.GetCurrentMouseState();
 					//if( Result.Last.IsSuccess && currentState != null )
 					{
 						bool[] buttons = currentState.Buttons;

@@ -5,7 +5,7 @@ using System.Linq;
 
 // 注意：
 // SlimDX.DirectInput.Key は、DIK_ とは数値が異なる。
-// SharpDX.DirectInput.Key は、DIK_ と同じ値である。
+// Vortice.DirectInput.Key は、DIK_ と同じ値である。
 
 namespace SlimDX.DirectInput
 {

@@ -6,9 +6,11 @@ using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Threading;
-using SharpDX;
-using SharpDX.Direct3D9;
-using SharpDX.Multimedia;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.Direct3D9;
+using Vortice.Multimedia;
 using DirectShowLib;
 
 namespace FDK
@@ -497,7 +499,7 @@ namespace FDK
 			//-----------------
 			#endregion
 
-			DataRectangle dr = texture.texture.LockRectangle( 0, LockFlags.Discard );
+			LockedRectangle dr = texture.texture.LockRect( 0, LockFlags.Discard );
 			try
 			{
 				if( this.nスキャンライン幅byte == dr.Pitch )
@@ -599,7 +601,7 @@ namespace FDK
 			}
 			finally
 			{
-				texture.texture.UnlockRectangle( 0 );
+				texture.texture.UnlockRect( 0 );
 			}
 		}
 
@@ -763,7 +765,7 @@ namespace FDK
 
 					#region [ type.formatPtr から wfx に、拡張領域を除くデータをコピーする。]
 					//-----------------
-					var wfxTemp = new WaveFormatEx();	// SharpDX.Multimedia.WaveFormat は Marshal.PtrToStructure() で使えないので、それが使える DirectShowLib.WaveFormatEx を介して取得する。（面倒…）
+					var wfxTemp = new WaveFormatEx();	// Vortice.Multimedia.WaveFormat は Marshal.PtrToStructure() で使えないので、それが使える DirectShowLib.WaveFormatEx を介して取得する。（面倒…）
 					Marshal.PtrToStructure( type.formatPtr, (object) wfxTemp );
 
 					wfx = WaveFormat.CreateCustomFormat((WaveFormatEncoding)wfxTemp.wFormatTag, wfxTemp.nSamplesPerSec, wfxTemp.nChannels, wfxTemp.nAvgBytesPerSec, wfxTemp.nBlockAlign, wfxTemp.wBitsPerSample);
@@ -1355,7 +1357,7 @@ namespace FDK
 				#region [ ROTから解放する。]
 				//-----------------
 #if DEBUG
-					C共通.tDisposeする( ref this.rot );
+					CCommon.tDispose( ref this.rot );
 #endif
 				//-----------------
 				#endregion

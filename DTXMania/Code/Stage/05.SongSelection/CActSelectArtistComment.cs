@@ -1,9 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Drawing;
 using System.Diagnostics;
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 using FDK;
 
 using Rectangle = System.Drawing.Rectangle;
@@ -41,8 +43,8 @@ namespace DTXMania
 						//Fix length issue of Artist using the same method used for Song Title
 						int nLargestLengthPx = 510;//510px is the available space for artist in the bar
 						int widthAfterScaling = (int)((ef.Width + 2) * 0.5f);//+2 buffer
-						if (widthAfterScaling > (CDTXMania.app.Device.Capabilities.MaxTextureWidth / 2))
-							widthAfterScaling = CDTXMania.app.Device.Capabilities.MaxTextureWidth / 2;  // 右端断ち切れ仕方ないよね
+						if (widthAfterScaling > (CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth / 2))
+							widthAfterScaling = CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth / 2;  // 右端断ち切れ仕方ないよね
 						//Compute horizontal scaling factor
 						float f拡大率X = (widthAfterScaling <= nLargestLengthPx) ? 0.5f : (((float)nLargestLengthPx / (float)widthAfterScaling) * 0.5f);   // 長い文字列は横方向に圧縮。
 																																						//ef.Width
@@ -70,8 +72,8 @@ namespace DTXMania
 					SizeF ef2 = graphics2.MeasureString( this.strComment, this.ft描画用フォント );
 					Size size = new Size( (int) Math.Ceiling( (double) ef2.Width ), (int) Math.Ceiling( (double) ef2.Height ) );
 					graphics2.Dispose();
-					this.nテクスチャの最大幅 = CDTXMania.app.Device.Capabilities.MaxTextureWidth;
-					int maxTextureHeight = CDTXMania.app.Device.Capabilities.MaxTextureHeight;
+					this.nテクスチャの最大幅 = CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth;
+					int maxTextureHeight = CDTXMania.app.Device.GetDeviceCaps().MaxTextureHeight;
 					Bitmap bitmap3 = new Bitmap( size.Width, (int) Math.Ceiling( (double) this.ft描画用フォント.Size ) );
 					graphics2 = Graphics.FromImage( bitmap3 );
 					graphics2.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Globalization;
@@ -8,10 +8,11 @@ using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Drawing.Text;
 using System.IO;
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 using FDK;
 
-using Color = System.Drawing.Color;
 using Point = System.Drawing.Point;
 using Rectangle = System.Drawing.Rectangle;
 using System.Drawing.Drawing2D;
@@ -1616,8 +1617,8 @@ namespace DTXMania
 				int n最大幅px = 510;
 				int height = 0x25;
 				int width = (int) ( ( sz曲名.Width + 2 ) * 0.5f );
-				if( width > ( CDTXMania.app.Device.Capabilities.MaxTextureWidth / 2 ) )
-					width = CDTXMania.app.Device.Capabilities.MaxTextureWidth / 2;	// 右端断ち切れ仕方ないよね
+				if( width > ( CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth / 2 ) )
+					width = CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth / 2;	// 右端断ち切れ仕方ないよね
 
 				float f拡大率X = ( width <= n最大幅px ) ? 0.5f : ( ( (float) n最大幅px / (float) width ) * 0.5f );	// 長い文字列は横方向に圧縮。
 

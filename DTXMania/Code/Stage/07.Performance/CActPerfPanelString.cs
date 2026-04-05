@@ -1,14 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Diagnostics;
 using System.IO;
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 using FDK;
-
-using Color = System.Drawing.Color;
 
 namespace DTXMania
 {
@@ -159,7 +159,7 @@ namespace DTXMania
                 }
                  */
 
-                SharpDX.Matrix mat = SharpDX.Matrix.Identity;
+                Matrix mat = Matrix.Identity;
 
                 //
                 float fScalingFactor;
@@ -179,9 +179,9 @@ namespace DTXMania
                     this.nジャケットX = 915;
                     this.nジャケットY = 287;
                    
-                    mat *= SharpDX.Matrix.Scaling(fScalingFactor, fScalingFactor, 1f);
-                    mat *= SharpDX.Matrix.Translation(400f, -227f, 0f);
-                    mat *= SharpDX.Matrix.RotationZ(0.3f);
+                    mat *= Matrix.CreateScale(fScalingFactor, fScalingFactor, 1f);
+                    mat *= Matrix.CreateTranslation(400f, -227f, 0f);
+                    mat *= Matrix.CreateRotationZ(0.3f);
                 }
 
                 if (CDTXMania.ConfigIni.bGuitarEnabled)
@@ -189,9 +189,9 @@ namespace DTXMania
                     this.nジャケットX = 467;
                     this.nジャケットY = 287;
 
-                    mat *= SharpDX.Matrix.Scaling(fScalingFactor, fScalingFactor, 1f);
-                    mat *= SharpDX.Matrix.Translation(-28f, -94.5f, 0f);
-                    mat *= SharpDX.Matrix.RotationZ(0.3f);
+                    mat *= Matrix.CreateScale(fScalingFactor, fScalingFactor, 1f);
+                    mat *= Matrix.CreateTranslation(-28f, -94.5f, 0f);
+                    mat *= Matrix.CreateRotationZ(0.3f);
                 }
 
                 if (this.txジャケットパネル != null)

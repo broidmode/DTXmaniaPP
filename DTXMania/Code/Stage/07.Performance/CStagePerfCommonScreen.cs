@@ -9,7 +9,6 @@ using System.Diagnostics;
 using System.Linq;
 using FDK;
 
-using Color = System.Drawing.Color;
 using Rectangle = System.Drawing.Rectangle;
 using SlimDXKey = SlimDX.DirectInput.Key;
 

@@ -21,7 +21,7 @@
 */
 using System;
 using System.Collections.Generic;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
 
 namespace SampleFramework
 {
@@ -103,10 +103,10 @@ namespace SampleFramework
 			optimal.AdapterOrdinal = settings.AdapterOrdinal;
 			optimal.DeviceType = settings.DeviceType;
 			pp.Windowed = settings.Windowed;
-			pp.BackBufferCount = settings.BackBufferCount;
+			pp.BackBufferCount = (uint)settings.BackBufferCount;
 			pp.MultiSampleType = settings.MultisampleType;
-			pp.MultiSampleQuality = settings.MultisampleQuality;
-			pp.FullScreenRefreshRateInHz = settings.RefreshRate;
+			pp.MultiSampleQuality = (int)settings.MultisampleQuality;
+			pp.FullScreenRefreshRateInHz = (uint)settings.RefreshRate;
 
 			if (settings.Multithreaded)
 				optimal.CreationFlags |= CreateFlags.Multithreaded;
@@ -131,8 +131,8 @@ namespace SampleFramework
 			}
 			else
 			{
-				pp.BackBufferWidth = settings.BackBufferWidth;
-				pp.BackBufferHeight = settings.BackBufferHeight;
+				pp.BackBufferWidth = (uint)settings.BackBufferWidth;
+				pp.BackBufferHeight = (uint)settings.BackBufferHeight;
 			}
 
 			if (settings.BackBufferFormat == Format.Unknown)
@@ -321,12 +321,12 @@ namespace SampleFramework
 					if (Math.Abs(type - input.PresentParameters.MultiSampleType) < Math.Abs(bestType - input.PresentParameters.MultiSampleType))
 					{
 						bestType = type;
-						bestQuality = Math.Min(quality - 1, input.PresentParameters.MultiSampleQuality);
+						bestQuality = Math.Min(quality - 1, (int)input.PresentParameters.MultiSampleQuality);
 					}
 				}
 
 				pp.MultiSampleType = bestType;
-				pp.MultiSampleQuality = bestQuality;
+				pp.MultiSampleQuality = (int)bestQuality;
 			}
 
 			List<int> rankings = new List<int>();
@@ -366,7 +366,7 @@ namespace SampleFramework
 				pp.FullScreenRefreshRateInHz = 0;
 			else
 			{
-				int match = input.PresentParameters.FullScreenRefreshRateInHz;
+				int match = (int)input.PresentParameters.FullScreenRefreshRateInHz;
 				bestDisplayMode.RefreshRate = 0;
 				if (match != 0)
 				{
@@ -378,7 +378,7 @@ namespace SampleFramework
 							displayMode.Height != bestDisplayMode.Height)
 							continue;
 
-						int ranking = Math.Abs(displayMode.RefreshRate - match);
+						int ranking = Math.Abs((int)displayMode.RefreshRate - match);
 
 						if (ranking < bestRanking)
 						{
@@ -421,8 +421,8 @@ namespace SampleFramework
 				if (mode.Format != combo.AdapterFormat)
 					continue;
 
-				ranking = Math.Abs(mode.Width - input.PresentParameters.BackBufferWidth) +
-					Math.Abs(mode.Height - input.PresentParameters.BackBufferHeight);
+				ranking = Math.Abs((int)mode.Width - (int)input.PresentParameters.BackBufferWidth) +
+					Math.Abs((int)mode.Height - (int)input.PresentParameters.BackBufferHeight);
 
 				if (ranking < bestRanking)
 				{

@@ -22,8 +22,10 @@
 using System;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using SharpDX;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.Direct3D9;
 
 namespace SampleFramework
 {

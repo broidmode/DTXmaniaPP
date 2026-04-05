@@ -19,9 +19,11 @@
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 * THE SOFTWARE.
 */
-using SharpDX;
-using SharpDX.Direct3D9;
-using DXGI = SharpDX.DXGI;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.Direct3D9;
+using DXGI = Vortice.DXGI;
 
 namespace SampleFramework
 {

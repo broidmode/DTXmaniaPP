@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
-using SharpDX;
-using SharpDX.DirectInput;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.DirectInput;
 
 using SlimDXKey = SlimDX.DirectInput.Key;
-using SharpDXKey = SharpDX.DirectInput.Key;
+using SharpDXKey = Vortice.DirectInput.Key;
 
 namespace FDK
 {
@@ -21,11 +23,12 @@ namespace FDK
 			this.ID = 0;
 			try
 			{
-				this.devKeyboard = new Keyboard(directInput);
+				this.devKeyboard = directInput.CreateDevice(DeviceGuid.SysKeyboard);
+				this.devKeyboard.SetDataFormat<RawKeyboardState>();
 				this.devKeyboard.SetCooperativeLevel(hWnd, CooperativeLevel.NoWinKey | CooperativeLevel.Foreground | CooperativeLevel.NonExclusive);
 				this.devKeyboard.Properties.BufferSize = 32;
-				Trace.TraceInformation(this.devKeyboard.Information.ProductName.Trim(new char[] { '\0' }) + " を生成しました。");    // なぜか0x00のゴミが出るので削除
-				this.strDeviceName = this.devKeyboard.Information.ProductName.Trim(new char[] { '\0' });
+				Trace.TraceInformation(this.devKeyboard.DeviceInfo.ProductName.Trim(new char[] { '\0' }) + " を生成しました。");    // なぜか0x00のゴミが出るので削除
+				this.strDeviceName = this.devKeyboard.DeviceInfo.ProductName.Trim(new char[] { '\0' });
 			}
 			catch
 			{
@@ -86,12 +89,12 @@ namespace FDK
 				{
 					#region [ a.バッファ入力 ]
 					//-----------------------------
-					var bufferedData = this.devKeyboard.GetBufferedData();
+					var bufferedData = this.devKeyboard.GetBufferedKeyboardData();
 					//if ( Result.Last.IsSuccess && bufferedData != null )
 					{
 						foreach (KeyboardUpdate data in bufferedData)
 						{
-							// #xxxxx: 2017.5.7: from: DIK (SharpDX.DirectInput.Key) を SlimDX.DirectInput.Key に変換。
+							// #xxxxx: 2017.5.7: from: DIK (Vortice.DirectInput.Key) を SlimDX.DirectInput.Key に変換。
 							var key = DeviceConstantConverter.DIKtoKey(data.Key);
 							if (SlimDXKey.Unknown == key)
 								continue;   // 未対応キーは無視。
@@ -148,12 +151,12 @@ namespace FDK
 				{
 					#region [ b.状態入力 ]
 					//-----------------------------
-					KeyboardState currentState = this.devKeyboard.GetCurrentState();
+					KeyboardState currentState = this.devKeyboard.GetCurrentKeyboardState();
 					//if ( Result.Last.IsSuccess && currentState != null )
 					{
 						foreach (SharpDXKey dik in currentState.PressedKeys)
 						{
-							// #xxxxx: 2017.5.7: from: DIK (SharpDX.DirectInput.Key) を SlimDX.DirectInput.Key に変換。
+							// #xxxxx: 2017.5.7: from: DIK (Vortice.DirectInput.Key) を SlimDX.DirectInput.Key に変換。
 							var key = DeviceConstantConverter.DIKtoKey(dik);
 							if (SlimDXKey.Unknown == key)
 								continue;   // 未対応キーは無視。
@@ -185,7 +188,7 @@ namespace FDK
 						//foreach ( Key key in currentState.ReleasedKeys )
 						foreach (SharpDXKey dik in currentState.AllKeys)
 						{
-							// #xxxxx: 2017.5.7: from: DIK (SharpDX.DirectInput.Key) を SlimDX.DirectInput.Key に変換。
+							// #xxxxx: 2017.5.7: from: DIK (Vortice.DirectInput.Key) を SlimDX.DirectInput.Key に変換。
 							var key = DeviceConstantConverter.DIKtoKey(dik);
 							if (SlimDXKey.Unknown == key)
 								continue;   // 未対応キーは無視。
@@ -224,7 +227,7 @@ namespace FDK
 		}
 
 		/// <param name="nKey">
-		///		調べる SlimDX.DirectInput.Key を int にキャストした値。（SharpDX.DirectInput.Key ではないので注意。）
+		///		調べる SlimDX.DirectInput.Key を int にキャストした値。（Vortice.DirectInput.Key ではないので注意。）
 		/// </param>
 		public bool bKeyPressed(int nKey)  // bキーが押された
 		{
@@ -232,7 +235,7 @@ namespace FDK
 		}
 
 		/// <param name="nKey">
-		///		調べる SlimDX.DirectInput.Key を int にキャストした値。（SharpDX.DirectInput.Key ではないので注意。）
+		///		調べる SlimDX.DirectInput.Key を int にキャストした値。（Vortice.DirectInput.Key ではないので注意。）
 		/// </param>
 		public bool bKeyPressing(int nKey)  // bキーが押されている
 		{
@@ -240,7 +243,7 @@ namespace FDK
 		}
 
 		/// <param name="nKey">
-		///		調べる SlimDX.DirectInput.Key を int にキャストした値。（SharpDX.DirectInput.Key ではないので注意。）
+		///		調べる SlimDX.DirectInput.Key を int にキャストした値。（Vortice.DirectInput.Key ではないので注意。）
 		/// </param>
 		public bool bKeyReleased(int nKey)  // bキーが離された
 		{
@@ -248,7 +251,7 @@ namespace FDK
 		}
 
 		/// <param name="nKey">
-		///		調べる SlimDX.DirectInput.Key を int にキャストした値。（SharpDX.DirectInput.Key ではないので注意。）
+		///		調べる SlimDX.DirectInput.Key を int にキャストした値。（Vortice.DirectInput.Key ではないので注意。）
 		/// </param>
 		public bool bKeyReleasing(int nKey)  // bキーが離されている
 		{

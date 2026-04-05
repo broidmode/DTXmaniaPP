@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Drawing;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
 using FDK;
 
 namespace DTXMania
@@ -133,7 +133,7 @@ namespace DTXMania
                 this.txBGAバックパネル = new CTexture(CDTXMania.app.Device, 278, 355, CDTXMania.app.GraphicsDeviceManager.CurrentSettings.BackBufferFormat, Pool.Managed);
 				using( Surface surface = CDTXMania.app.Device.GetBackBuffer( 0, 0 ) )
 				{
-					this.sfBackBuffer = Surface.CreateOffscreenPlain( CDTXMania.app.Device, surface.Description.Width, surface.Description.Height, surface.Description.Format, Pool.SystemMemory );
+					this.sfBackBuffer = CDTXMania.app.Device.CreateOffscreenPlainSurface( surface.Description.Width, surface.Description.Height, surface.Description.Format, Pool.SystemMemory );
 				}
 				base.OnManagedCreateResources();
 			}

@@ -23,8 +23,10 @@ using System;
 using System.ComponentModel;
 using System.Threading;
 using System.Windows.Forms;
-using SharpDX;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.Direct3D9;
 using System.Collections.ObjectModel;
 
 namespace SampleFramework
@@ -186,15 +188,16 @@ namespace SampleFramework
             //Configuration.AddResultWatch(ResultCode.DeviceLost, ResultWatchFlags.AlwaysIgnore);
             //Configuration.AddResultWatch(ResultCode.WasStillDrawing, ResultWatchFlags.AlwaysIgnore);
 
-#if DEBUG
+// SharpDX.Configuration object tracking was removed during Vortice migration.
+// #if DEBUG
             //Configuration.DetectDoubleDispose = true;
-            Configuration.EnableObjectTracking = true;
+            //Configuration.EnableObjectTracking = true;
 			//Configuration.EnableTrackingReleaseOnFinalizer = true;
 			//Configuration.EnableReleaseOnFinalizer = true;
-#else
+// #else
             //Configuration.DetectDoubleDispose = false;
-            Configuration.EnableObjectTracking = false;
-#endif
+            //Configuration.EnableObjectTracking = false;
+// #endif
 
             // setup the application
             Application.EnableVisualStyles();

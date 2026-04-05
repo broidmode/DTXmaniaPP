@@ -1,13 +1,14 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.IO;
 using System.Drawing;
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 using FDK;
 
-using Color = System.Drawing.Color;
 using Rectangle = System.Drawing.Rectangle;
 
 namespace DTXMania
@@ -223,9 +224,9 @@ namespace DTXMania
                 {
                     fScalingFactor = jacketOnScreenSize / this.txリザルト画像.szImageSize.Width;
                 }
-                mat *= Matrix.Scaling(fScalingFactor, fScalingFactor, 1f);
-                mat *= Matrix.Translation(-28f, -94.5f, 0f);
-                mat *= Matrix.RotationZ(0.3f);
+                mat *= Matrix.CreateScale(fScalingFactor, fScalingFactor, 1f);
+                mat *= Matrix.CreateTranslation(-28f, -94.5f, 0f);
+                mat *= Matrix.CreateRotationZ(0.3f);
 
                 this.txリザルト画像.tDraw3D(CDTXMania.app.Device, mat);
             }

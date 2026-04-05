@@ -1,10 +1,16 @@
 {
     "version": "2.0.0",
+    "options": {
+        "env": {
+            "PATH": "${env:LOCALAPPDATA}\\dotnet-sdk;${env:PATH}",
+            "DOTNET_ROOT": "${env:LOCALAPPDATA}\\dotnet-sdk"
+        }
+    },
     "tasks": [
         {
             "label": "build-debug-x64",
             "type": "shell",
-            "command": "& 'C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe' '${workspaceFolder}\\DTXMania.sln' /t:DTXMania /p:Configuration=Debug /p:Platform=x64 /m /v:minimal /restore",
+            "command": "dotnet build '${workspaceFolder}\\DTXMania.sln' -c Debug -p:Platform=x64 -v:minimal",
             "group": {
                 "kind": "build",
                 "isDefault": true
@@ -18,7 +24,7 @@
         {
             "label": "build-release-x64",
             "type": "shell",
-            "command": "& 'C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe' '${workspaceFolder}\\DTXMania.sln' /t:DTXMania /p:Configuration=Release /p:Platform=x64 /m /v:minimal /restore",
+            "command": "dotnet build '${workspaceFolder}\\DTXMania.sln' -c Release -p:Platform=x64 -v:minimal",
             "group": "build",
             "problemMatcher": "$msCompile",
             "presentation": {
@@ -29,13 +35,13 @@
         {
             "label": "clean",
             "type": "shell",
-            "command": "& 'C:\\Program Files (x86)\\Microsoft Visual Studio\\18\\BuildTools\\MSBuild\\Current\\Bin\\MSBuild.exe' '${workspaceFolder}\\DTXMania.sln' /t:Clean /p:Configuration=Debug /p:Platform=x64 /v:minimal",
+            "command": "dotnet clean '${workspaceFolder}\\DTXMania.sln' -c Debug -p:Platform=x64 -v:minimal",
             "problemMatcher": "$msCompile"
         },
         {
             "label": "restore",
             "type": "shell",
-            "command": "${workspaceFolder}\\nuget.exe restore ${workspaceFolder}\\DTXMania.sln",
+            "command": "dotnet restore '${workspaceFolder}\\DTXMania.sln'",
             "problemMatcher": []
         }
     ]

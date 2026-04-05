@@ -20,7 +20,7 @@
 * THE SOFTWARE.
 */
 using System;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
 namespace SampleFramework
 {
     /// <summary>
@@ -258,7 +258,7 @@ namespace SampleFramework
 
             foreach (AdapterInfo9 adapterInfo in Enumeration9.Adapters)
             {
-                DisplayMode desktopMode = GraphicsDeviceManager.Direct3D9Object.GetAdapterDisplayMode(adapterInfo.AdapterOrdinal);
+                DisplayMode desktopMode = GraphicsDeviceManager.Direct3D9Object.GetAdapterDisplayMode((uint)adapterInfo.AdapterOrdinal);
                 foreach (DeviceInfo9 deviceInfo in adapterInfo.Devices)
                 {
                     foreach (SettingsCombo9 combo in deviceInfo.DeviceSettings)

@@ -365,7 +365,7 @@ namespace FDK
 		public static extern bool PeekMessage(out WindowMessage message, IntPtr hwnd, uint messageFilterMin, uint messageFilterMax, uint flags);
 		//[DllImport( "kernel32.dll", CharSet = CharSet.Auto )]
 		//public static extern uint SetThreadExecutionState( uint esFlags );
-		[DllImport("Kernel32.Dll")]
+		[DllImport("Kernel32.Dll", EntryPoint = "RtlMoveMemory")]
 		public static unsafe extern void CopyMemory(void* pDest, void* pSrc, uint numOfBytes);
 
 		[DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]

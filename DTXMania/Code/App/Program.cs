@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Runtime.Loader;
+using System.Reflection;
 using System.Threading;
 using System.Diagnostics;
 using System.Windows.Forms;
@@ -14,6 +16,12 @@ namespace DTXMania
 {
 	internal class Program
 	{
+		static Program()
+		{
+			// .NET 8 does not include legacy encodings like shift-jis by default.
+			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+		}
+
 		#region [ 二重機動チェック、DLL存在チェック ]
 		//-----------------------------
 		private static Mutex mutex二重起動防止用;
@@ -60,6 +68,16 @@ namespace DTXMania
 		[STAThread]
 		private static void Main()
 		{
+			// .NET 8: Probe the dll\ subfolder for managed assemblies
+			// (replaces app.config <probing privatePath="dll" /> from .NET Framework)
+			AssemblyLoadContext.Default.Resolving += (context, assemblyName) =>
+			{
+				string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "dll", assemblyName.Name + ".dll");
+				if (File.Exists(dllPath))
+					return context.LoadFromAssemblyPath(dllPath);
+				return null;
+			};
+
 			mutex二重起動防止用 = new Mutex( false, "DTXManiaMutex" );
 
 			if( mutex二重起動防止用.WaitOne( 0, false ) )

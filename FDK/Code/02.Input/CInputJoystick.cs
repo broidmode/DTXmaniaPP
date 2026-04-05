@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
-using SharpDX;
-using SharpDX.DirectInput;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.DirectInput;
 
 namespace FDK
 {
@@ -18,11 +20,12 @@ namespace FDK
 			this.ID = 0;
 			try
 			{
-				this.devJoystick = new Joystick(directInput, di.InstanceGuid);
+				this.devJoystick = directInput.CreateDevice(di.InstanceGuid);
+				this.devJoystick.SetDataFormat<RawJoystickState>();
 				this.devJoystick.SetCooperativeLevel(hWnd, CooperativeLevel.Foreground | CooperativeLevel.Exclusive);
 				this.devJoystick.Properties.BufferSize = 32;
-				Trace.TraceInformation(this.devJoystick.Information.InstanceName + "を生成しました。");
-				this.strDeviceName = this.devJoystick.Information.InstanceName;
+				Trace.TraceInformation(this.devJoystick.DeviceInfo.InstanceName + "を生成しました。");
+				this.strDeviceName = this.devJoystick.DeviceInfo.InstanceName;
 			}
 			catch
 			{
@@ -31,7 +34,7 @@ namespace FDK
 					this.devJoystick.Dispose();
 					this.devJoystick = null;
 				}
-				Trace.TraceError(this.devJoystick.Information.InstanceName, new object[] { " の生成に失敗しました。" });
+				Trace.TraceError(this.devJoystick.DeviceInfo.InstanceName, new object[] { " の生成に失敗しました。" });
 				throw;
 			}
 			foreach (DeviceObjectInstance instance in this.devJoystick.GetObjects())
@@ -120,7 +123,7 @@ namespace FDK
 				{
 					#region [ a.バッファ入力 ]
 					//-----------------------------
-					var bufferedData = this.devJoystick.GetBufferedData();
+					var bufferedData = this.devJoystick.GetBufferedJoystickData();
 					//if( Result.Last.IsSuccess && bufferedData != null )
 					{
 						foreach (JoystickUpdate data in bufferedData)
@@ -302,7 +305,7 @@ Trace.TraceInformation( "TS={0}: IsPressed={1}, IsReleased={2}", data.TimeStamp,
 				{
 					#region [ b.状態入力 ]
 					//-----------------------------
-					JoystickState currentState = this.devJoystick.GetCurrentState();
+					JoystickState currentState = this.devJoystick.GetCurrentJoystickState();
 					//if( Result.Last.IsSuccess && currentState != null )
 					{
 						#region [ X軸－ ]

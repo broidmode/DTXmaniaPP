@@ -5,7 +5,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Diagnostics;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
 
 namespace FDK
 {
@@ -60,9 +60,10 @@ namespace FDK
 				throw new FileNotFoundException( string.Format( "ファイルが存在しません。\n[{0}]", strファイル名 ) );
 
 			Byte[] _txData = File.ReadAllBytes( strファイル名 );
-			bool b条件付きでサイズは２の累乗でなくてもOK = ( device.Capabilities.TextureCaps & TextureCaps.NonPow2Conditional ) != 0;
-			bool bサイズは２の累乗でなければならない = ( device.Capabilities.TextureCaps & TextureCaps.Pow2 ) != 0;
-			bool b正方形でなければならない = ( device.Capabilities.TextureCaps & TextureCaps.SquareOnly ) != 0;
+			var caps = device.GetDeviceCaps();
+			bool b条件付きでサイズは２の累乗でなくてもOK = ( caps.TextureCaps & TextureCaps.NonPow2Conditional ) != 0;
+			bool bサイズは２の累乗でなければならない = ( caps.TextureCaps & TextureCaps.Pow2 ) != 0;
+			bool b正方形でなければならない = ( caps.TextureCaps & TextureCaps.SquareOnly ) != 0;
 
 			// そもそもこんな最適化をしなくてよいのなら、さっさとbaseに処理を委ねて終了
 			if ( !bサイズは２の累乗でなければならない && b条件付きでサイズは２の累乗でなくてもOK )
@@ -72,8 +73,8 @@ namespace FDK
 				return;
 			}
 
-			var information = ImageInformation.FromMemory( _txData );
-			int orgWidth = information.Width, orgHeight = information.Height;
+			var information = D3DX9Helpers.GetImageInfoFromMemory( _txData );
+			int orgWidth = (int)information.Width, orgHeight = (int)information.Height;
 			int w = orgWidth, h = orgHeight, foldtimes;
 
 			#region [ 折りたたみありで最適なテクスチャサイズがどうなるかを確認する(正方形にするかは考慮せず) ]

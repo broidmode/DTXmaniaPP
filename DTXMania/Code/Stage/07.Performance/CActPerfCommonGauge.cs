@@ -4,7 +4,9 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Diagnostics;
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 using FDK;
 
 namespace DTXMania

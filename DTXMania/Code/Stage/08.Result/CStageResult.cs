@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using System.Diagnostics;
 using FDK;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
 using DirectShowLib;
 
 using SlimDXKey = SlimDX.DirectInput.Key;

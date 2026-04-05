@@ -1,4 +1,4 @@
-﻿using DiscordRPC;
+using DiscordRPC;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -6,12 +6,13 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.IO;
-using SharpDX;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.Direct3D9;
 using System.Drawing.Text;
 using FDK;
 
-using Color = System.Drawing.Color;
 using Point = System.Drawing.Point;
 using Rectangle = System.Drawing.Rectangle;
 using SlimDXKey = SlimDX.DirectInput.Key;
@@ -476,9 +477,9 @@ namespace DTXMania
                 {
                     fScalingFactor = jacketOnScreenSize / this.txJacket.szImageSize.Width;
                 }
-                mat *= Matrix.Scaling(fScalingFactor, fScalingFactor, 1f);
-                mat *= Matrix.Translation(206f, 66f, 0f);
-                mat *= Matrix.RotationZ(0.28f);
+                mat *= Matrix.CreateScale(fScalingFactor, fScalingFactor, 1f);
+                mat *= Matrix.CreateTranslation(206f, 66f, 0f);
+                mat *= Matrix.CreateRotationZ(0.28f);
 
                 this.txJacket.tDraw3D(CDTXMania.app.Device, mat);
             }

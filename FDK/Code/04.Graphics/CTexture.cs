@@ -5,8 +5,9 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Diagnostics;
-using SharpDX;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 
 using Rectangle = System.Drawing.Rectangle;
 
@@ -134,7 +135,7 @@ namespace FDK
 					bitmap.Save( stream, ImageFormat.Bmp );
 					stream.Seek( 0L, SeekOrigin.Begin );
 					int colorKey = unchecked( (int) 0xFF000000 );
-					this.texture = Texture.FromStream( device, stream, this.szTextureSize.Width, this.szTextureSize.Height, 1, Usage.None, format, poolvar, Filter.Point, Filter.None, colorKey );
+					this.texture = D3DX9Helpers.CreateTextureFromStream( device, stream, this.szTextureSize.Width, this.szTextureSize.Height, 1, Usage.None, format, poolvar, D3DX9Helpers.D3DX_FILTER_POINT, D3DX9Helpers.D3DX_FILTER_NONE, colorKey );
                     this.bSharpDXTextureDispose完了済み = false;
 				}
 			}
@@ -228,7 +229,7 @@ namespace FDK
 						pool = poolvar;
 #endif
 						// 中で更にメモリ読み込みし直していて無駄なので、Streamを使うのは止めたいところ
-						this.texture = Texture.FromStream( device, stream, n幅, n高さ, 1, usage, format, pool, Filter.Point, Filter.None, 0 );
+						this.texture = D3DX9Helpers.CreateTextureFromStream( device, stream, n幅, n高さ, 1, usage, format, pool, D3DX9Helpers.D3DX_FILTER_POINT, D3DX9Helpers.D3DX_FILTER_NONE, 0 );
                         this.bSharpDXTextureDispose完了済み = false;
 					}
 				}
@@ -277,9 +278,9 @@ namespace FDK
 		{
 			try
 			{
-				var information = ImageInformation.FromMemory( txData );
+				var information = D3DX9Helpers.GetImageInfoFromMemory( txData );
 				this.Format = format;
-				this.szImageSize = new Size( information.Width, information.Height );
+				this.szImageSize = new Size( (int)information.Width, (int)information.Height );
 				this.rcFullImage = new Rectangle( 0, 0, this.szImageSize.Width, this.szImageSize.Height );
 				int colorKey = ( b黒を透過する ) ? unchecked( (int) 0xFF000000 ) : 0;
 				this.szTextureSize = this.tGetOptimalTextureSizeNotExceedingSpecifiedSize( device, this.szImageSize );
@@ -289,16 +290,16 @@ namespace FDK
 				//				lock ( lockobj )
 				//				{
 				//Trace.TraceInformation( "CTexture() start: " );
-				this.texture = Texture.FromMemory( device, txData, this.szImageSize.Width, this.szImageSize.Height, 1, Usage.None, format, pool, Filter.Point, Filter.None, colorKey );
+				this.texture = D3DX9Helpers.CreateTextureFromMemory( device, txData, this.szImageSize.Width, this.szImageSize.Height, 1, Usage.None, format, pool, D3DX9Helpers.D3DX_FILTER_POINT, D3DX9Helpers.D3DX_FILTER_NONE, colorKey );
                 this.bSharpDXTextureDispose完了済み = false;
 				//Trace.TraceInformation( "CTexture() end:   " );
 				//				}
 			}
-			catch
+			catch (Exception ex)
 			{
+				System.Diagnostics.Trace.TraceError("MakeTexture(byte[]) failed: {0}\n{1}", ex.Message, ex.StackTrace);
 				this.Dispose();
-				// throw new CTextureCreateFailedException( string.Format( "テクスチャの生成に失敗しました。\n{0}", strファイル名 ) );
-				throw new CTextureCreateFailedException( string.Format( "テクスチャの生成に失敗しました。\n" ) );
+				throw new CTextureCreateFailedException( string.Format( "テクスチャの生成に失敗しました。\n{0}", ex.Message ) );
 			}
 		}
 
@@ -329,12 +330,12 @@ namespace FDK
 					this.szImageSize.Width;
 #endif
 #if TEST_Direct3D9Ex
-					this.texture = new Texture( device, tw, this.sz画像サイズ.Height, 1, Usage.Dynamic, format, Pool.Default );
+					this.texture = device.CreateTexture((uint)tw, (uint)this.sz画像サイズ.Height, 1, Usage.Dynamic, format, Pool.Default);
 #else
-					this.texture = new Texture( device, this.szImageSize.Width, this.szImageSize.Height, 1, Usage.None, format, pool );
+					this.texture = device.CreateTexture((uint)this.szImageSize.Width, (uint)this.szImageSize.Height, 1, Usage.None, format, pool);
 #endif
 					BitmapData srcBufData = bitmap.LockBits( new Rectangle( 0, 0, this.szImageSize.Width, this.szImageSize.Height ), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb );
-					DataRectangle destDataRectangle = texture.LockRectangle( 0, LockFlags.Discard );	// None
+					LockedRectangle destDataRectangle = texture.LockRect( 0, LockFlags.Discard );	// None
 #if TEST_Direct3D9Ex
 					byte[] filldata = null;
 					if ( tw > this.sz画像サイズ.Width )
@@ -353,19 +354,20 @@ namespace FDK
 #else
 					IntPtr src_scan0 = (IntPtr) ( (Int64) srcBufData.Scan0 );
 					//destDataRectangle.Data.WriteRange( src_scan0, this.szImageSize.Width * 4 * this.szImageSize.Height );
-					CopyMemory(destDataRectangle.DataPointer.ToPointer(), src_scan0.ToPointer(), this.szImageSize.Width * 4 * this.szImageSize.Height);
+					long byteCount = this.szImageSize.Width * 4 * this.szImageSize.Height;
+					Buffer.MemoryCopy(src_scan0.ToPointer(), destDataRectangle.DataPointer.ToPointer(), byteCount, byteCount);
 #endif
-					texture.UnlockRectangle( 0 );
+					texture.UnlockRect( 0 );
 					bitmap.UnlockBits( srcBufData );
                     this.bSharpDXTextureDispose完了済み = false;
 				}
 				//Trace.TraceInformation( "CTExture() End: " );
 			}
-			catch
+			catch (Exception ex)
 			{
+				System.Diagnostics.Trace.TraceError("MakeTexture(Bitmap) failed: {0}\n{1}", ex.Message, ex.StackTrace);
 				this.Dispose();
-				// throw new CTextureCreateFailedException( string.Format( "テクスチャの生成に失敗しました。\n{0}", strファイル名 ) );
-				throw new CTextureCreateFailedException( string.Format( "テクスチャの生成に失敗しました。\n" ) );
+				throw new CTextureCreateFailedException( string.Format( "テクスチャの生成に失敗しました。\n{0}", ex.Message ) );
 			}
 		}
 		// メソッド
@@ -411,8 +413,8 @@ namespace FDK
 				float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
 				float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
 				float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-				this.color4.Alpha = ( (float) this._Transparency ) / 255f;
-				int color = this.color4.ToRgba();
+				this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
+				int color = (int)this.color4.ToRgba();
 
 				if( this.cvTransformedColoredVertexies == null )
 					this.cvTransformedColoredVertexies = new TransformedColoredTexturedVertex[ 4 ];
@@ -469,8 +471,8 @@ namespace FDK
 				float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
 				float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
 				float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-				this.color4.Alpha = ( (float) this._Transparency ) / 255f;
-				int color = this.color4.ToRgba();
+				this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
+				int color = (int)this.color4.ToRgba();
 
 				if( this.cvPositionColoredVertexies == null )
 					this.cvPositionColoredVertexies = new PositionColoredTexturedVertex[ 4 ];
@@ -509,10 +511,10 @@ namespace FDK
 				int n描画領域内Y = y + ( rc画像内の描画領域.Height / 2 );
 				var vc3移動量 = new Vector3( n描画領域内X - ( (float) SampleFramework.GameWindowSize.Width / 2f ), -( n描画領域内Y - ( (float) SampleFramework.GameWindowSize.Height / 2f ) ), 0f );
 				
-				var matrix = Matrix.Identity * Matrix.Scaling( this.vcScaleRatio );
-				matrix *= Matrix.RotationZ( this.fZAxisRotation );
-				matrix *= Matrix.Translation( vc3移動量 );
-				device.SetTransform( TransformState.World, matrix );
+				var matrix = Matrix4x4.Identity * Matrix4x4.CreateScale( this.vcScaleRatio );
+				matrix *= Matrix4x4.CreateRotationZ( this.fZAxisRotation );
+				matrix *= Matrix4x4.CreateTranslation( vc3移動量 );
+				device.SetTransform( D3D9Extensions.TransformState_World, matrix );
 
 				device.SetTexture( 0, this.texture );
 				device.VertexFormat = TransformedColoredTexturedVertex.Format;
@@ -544,8 +546,8 @@ namespace FDK
 			float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
 			float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
 			float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-			this.color4.Alpha = ( (float) this._Transparency ) / 255f;
-			int color = this.color4.ToRgba();
+			this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
+			int color = (int)this.color4.ToRgba();
 
             if( this.cvTransformedColoredVertexies == null )
 			    this.cvTransformedColoredVertexies = new TransformedColoredTexturedVertex[ 4 ];
@@ -608,8 +610,8 @@ namespace FDK
 			float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
 			float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
 			float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-			this.color4.Alpha = ( (float) this._Transparency ) / 255f;
-			int color = this.color4.ToRgba();
+			this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
+			int color = (int)this.color4.ToRgba();
 			
 			if( this.cvPositionColoredVertexies == null )
 				this.cvPositionColoredVertexies = new PositionColoredTexturedVertex[ 4 ];
@@ -646,7 +648,7 @@ namespace FDK
 
 			this.tRenderStateSettings( device );
 
-			device.SetTransform( TransformState.World, mat );
+			device.SetTransform( D3D9Extensions.TransformState_World, mat );
 			device.SetTexture( 0, this.texture );
 			device.VertexFormat = PositionColoredTexturedVertex.Format;
 			device.DrawUserPrimitives( PrimitiveType.TriangleStrip, 2, this.cvPositionColoredVertexies );
@@ -675,8 +677,8 @@ namespace FDK
 			float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
 			float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
 			float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-			this.color4.Alpha = ( (float) this._Transparency ) / 255f;
-			int color = this.color4.ToRgba();
+			this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
+			int color = (int)this.color4.ToRgba();
 			
 			if( this.cvPositionColoredVertexies == null )
 				this.cvPositionColoredVertexies = new PositionColoredTexturedVertex[ 4 ];
@@ -713,7 +715,7 @@ namespace FDK
 
 			this.tRenderStateSettings( device );
 
-			device.SetTransform( TransformState.World, mat );
+			device.SetTransform( D3D9Extensions.TransformState_World, mat );
 			device.SetTexture( 0, this.texture );
 			device.VertexFormat = PositionColoredTexturedVertex.Format;
 			device.DrawUserPrimitives( PrimitiveType.TriangleStrip, 2, this.cvPositionColoredVertexies );
@@ -784,23 +786,24 @@ namespace FDK
 			if( this.bAdditiveBlending )
 			{
 				device.SetRenderState( RenderState.AlphaBlendEnable, true );
-				device.SetRenderState( RenderState.SourceBlend, SharpDX.Direct3D9.Blend.SourceAlpha );				// 5
-				device.SetRenderState( RenderState.DestinationBlend, SharpDX.Direct3D9.Blend.One );					// 2
+				device.SetRenderState( RenderState.SourceBlend, Blend.SourceAlpha );				// 5
+				device.SetRenderState( RenderState.DestinationBlend, Blend.One );					// 2
 			}
 			else
 			{
 				device.SetRenderState( RenderState.AlphaBlendEnable, true );
-				device.SetRenderState( RenderState.SourceBlend, SharpDX.Direct3D9.Blend.SourceAlpha );				// 5
-				device.SetRenderState( RenderState.DestinationBlend, SharpDX.Direct3D9.Blend.InverseSourceAlpha );	// 6
+				device.SetRenderState( RenderState.SourceBlend, Blend.SourceAlpha );				// 5
+				device.SetRenderState( RenderState.DestinationBlend, Blend.InverseSourceAlpha );	// 6
 			}
 		}
 		private Size tGetOptimalTextureSizeNotExceedingSpecifiedSize( Device device, Size sz指定サイズ )
 		{
-			bool b条件付きでサイズは２の累乗でなくてもOK = ( device.Capabilities.TextureCaps & TextureCaps.NonPow2Conditional ) != 0;
-			bool bサイズは２の累乗でなければならない = ( device.Capabilities.TextureCaps & TextureCaps.Pow2 ) != 0;
-			bool b正方形でなければならない = ( device.Capabilities.TextureCaps & TextureCaps.SquareOnly ) != 0;
-			int n最大幅 = device.Capabilities.MaxTextureWidth;
-			int n最大高 = device.Capabilities.MaxTextureHeight;
+			var caps = device.GetDeviceCaps();
+			bool b条件付きでサイズは２の累乗でなくてもOK = ( caps.TextureCaps & TextureCaps.NonPow2Conditional ) != 0;
+			bool bサイズは２の累乗でなければならない = ( caps.TextureCaps & TextureCaps.Pow2 ) != 0;
+			bool b正方形でなければならない = ( caps.TextureCaps & TextureCaps.SquareOnly ) != 0;
+			int n最大幅 = caps.MaxTextureWidth;
+			int n最大高 = caps.MaxTextureHeight;
 			var szSize = new Size( sz指定サイズ.Width, sz指定サイズ.Height );
 			
 			if( bサイズは２の累乗でなければならない && !b条件付きでサイズは２の累乗でなくてもOK )
@@ -855,8 +858,8 @@ namespace FDK
 
 		#region " Win32 API "
 		//-----------------
-		[System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true)]
-		private static extern unsafe void CopyMemory(void* dst, void* src, int size);
+		// CopyMemory P/Invoke removed — .NET 8 doesn't resolve it from kernel32.dll.
+		// Using Buffer.MemoryCopy instead.
 		//-----------------
 		#endregion
 	}

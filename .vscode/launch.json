@@ -3,18 +3,22 @@
     "configurations": [
         {
             "name": "DTXMania (Debug x64)",
-            "type": "clr",
+            "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build-debug-x64",
             "program": "${workspaceFolder}/Runtime/DTXManiaNX.exe",
             "args": [],
             "cwd": "${workspaceFolder}/Runtime",
             "console": "internalConsole",
-            "stopAtEntry": false
+            "stopAtEntry": false,
+            "env": {
+                "PATH": "${env:LOCALAPPDATA}\\dotnet-sdk;${env:PATH}",
+                "DOTNET_ROOT": "${env:LOCALAPPDATA}\\dotnet-sdk"
+            }
         },
         {
             "name": "DTXMania (Attach)",
-            "type": "clr",
+            "type": "coreclr",
             "request": "attach"
         }
     ]

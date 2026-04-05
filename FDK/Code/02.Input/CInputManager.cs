@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
-using SharpDX.DirectInput;
+using Vortice.DirectInput;
 
 namespace FDK
 {
@@ -69,7 +69,7 @@ namespace FDK
 
 		public void CInput管理初期化(IntPtr hWnd, bool bUseMidiIn)
 		{
-			this.directInput = new DirectInput();
+			this.directInput = DInput.DirectInput8Create();
 			// this.timer = new CTimer( CTimer.E種別.MultiMedia );
 
 			this.listInputDevices = new List<IInputDevice>(10);
@@ -81,8 +81,9 @@ namespace FDK
 				cinputkeyboard = new CInputKeyboard(hWnd, directInput);
 				cinputmouse = new CInputMouse(hWnd, directInput);
 			}
-			catch
+			catch (Exception ex)
 			{
+				Trace.TraceError("Failed to initialize keyboard/mouse: {0}", ex);
 			}
 			if (cinputkeyboard != null)
 			{
@@ -180,9 +181,10 @@ namespace FDK
 					{
 						device.tPolling(bWindowがアクティブ中, bバッファ入力を使用する);
 					}
-					catch (SharpDX.SharpDXException e)                                      // #24016 2011.1.6 yyagi: catch exception for unplugging USB joystick, and remove the device object from the polling items.
+					catch (SharpGen.Runtime.SharpGenException e)                             // #24016 2011.1.6 yyagi: catch exception for unplugging USB joystick, and remove the device object from the polling items.
 					{
-						if (e.ResultCode == ResultCode.OtherApplicationHasPriority)
+						// DIERR_OTHERAPPHASPRIO == E_ACCESSDENIED (0x80070005)
+						if (e.ResultCode == new Result(unchecked((int)0x80070005)))
 						{
 							// #xxxxx: 2017.5.9: from: このエラーの時は、何もしない。
 						}

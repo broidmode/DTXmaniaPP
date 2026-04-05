@@ -8,7 +8,9 @@ using System.Drawing;
 using System.Threading;
 using System.Globalization;
 using System.Runtime.Serialization.Formatters.Binary;
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 using FDK;
 using SampleFramework;
 

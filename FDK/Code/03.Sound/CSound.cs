@@ -6,9 +6,11 @@ using System.Runtime.InteropServices;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using SharpDX;
-using SharpDX.DirectSound;
-using SharpDX.Multimedia;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.DirectSound;
+using Vortice.Multimedia;
 using Un4seen.Bass;
 using Un4seen.BassAsio;
 using Un4seen.BassWasapi;
@@ -717,7 +719,7 @@ namespace FDK
 						this._n音量db = (int)((20.0 * Math.Log10(((double)this._n音量) / 100.0)) * 100.0);
 					}
 
-					this.Buffer.Volume = this._n音量db;
+					this.Buffer.SetVolume(this._n音量db);
 				}
 			}
 		}
@@ -777,7 +779,7 @@ namespace FDK
 						this._n位置db = (int)((-20.0 * Math.Log10(((double)(100 - this._n位置)) / 100.0)) * 100.0);
 					}
 
-					this.Buffer.Pan = this._n位置db;
+					this.Buffer.SetPan(this._n位置db);
 				}
 			}
 		}
@@ -1022,7 +1024,7 @@ namespace FDK
 						}
 						else if (tag == WaveFormatEncoding.Extensible)
 						{
-							wfx = SharpDX.Multimedia.WaveFormatExtensible.CreateCustomFormat( // このクラスは WaveFormat を継承している。
+							wfx = Vortice.Multimedia.WaveFormatExtensible.CreateCustomFormat( // このクラスは WaveFormat を継承している。
 								tag, samplesPerSecond, channels, averageBytesPerSecond, blockAlignment, bitsPerSample);
 						}
 						else
@@ -1033,10 +1035,10 @@ namespace FDK
 						if (wfx.Encoding == WaveFormatEncoding.Extensible)
 						{
 							br.ReadUInt16();    // 拡張領域サイズbyte
-							var wfxEx = (SharpDX.Multimedia.WaveFormatExtensible)wfx;
+							var wfxEx = (Vortice.Multimedia.WaveFormatExtensible)wfx;
 							/*wfxEx.ValidBitsPerSample = */
 							br.ReadInt16(); // 対応するメンバがない？
-							wfxEx.ChannelMask = (Speakers)br.ReadInt32();
+							wfxEx.ChannelMask = br.ReadInt32();
 							wfxEx.GuidSubFormat = new Guid(br.ReadBytes(16));   // GUID は 16byte (128bit)
 
 							nフォーマットサイズbyte += 24;
@@ -1099,13 +1101,13 @@ namespace FDK
 
 			this._Format = wfx;
 
-			this.Buffer = new SecondarySoundBuffer(DirectSound, new SoundBufferDescription()
+			this.Buffer = DirectSound.CreateSoundBuffer(new SoundBufferDescription()
 			{
 				Format = this._Format,
 				Flags = flags,
 				BufferBytes = nPCMサイズbyte,
-			});
-			this.Buffer.Write(byArrWAVファイルイメージ, nPCMデータの先頭インデックス, nPCMサイズbyte, 0, LockFlags.None);
+			}, null);
+			this.Buffer.Write(byArrWAVファイルイメージ, nPCMデータの先頭インデックス, nPCMサイズbyte, 0, Vortice.DirectSound.LockFlags.None);
 
 			// 作成完了。
 
@@ -1328,7 +1330,7 @@ namespace FDK
 			}
 			else if (this.bIsDirectSound)
 			{
-				this.Buffer.CurrentPosition = 0;
+				this.Buffer.SetCurrentPosition(0);
 			}
 		}
 		public void tChangePlaybackPosition(long n位置ms)  // t再生位置を変更する
@@ -1362,7 +1364,7 @@ namespace FDK
 				int n位置sample = (int)(this._Format.SampleRate * n位置ms * 0.001 * _db周波数倍率 * _db再生速度);  // #30839 2013.2.24 yyagi; add _db周波数倍率 and _db再生速度
 				try
 				{
-					this.Buffer.CurrentPosition = n位置sample * this._Format.BlockAlign;
+					this.Buffer.SetCurrentPosition((int)(n位置sample * this._Format.BlockAlign));
 				}
 				catch (Exception e)
 				{
@@ -1714,8 +1716,8 @@ namespace FDK
 			{
 				using (var ws = new SoundStream(new FileStream(strファイル名, FileMode.Open)))
 				{
-					if (ws.Format.Encoding == WaveFormatEncoding.OggVorbisMode2Plus ||
-						ws.Format.Encoding == WaveFormatEncoding.OggVorbisMode3Plus)
+					if (ws.Format.Encoding == (WaveFormatEncoding)0x6771 ||
+						ws.Format.Encoding == (WaveFormatEncoding)0x6772)
 					{
 						Trace.TraceInformation(Path.GetFileName(strファイル名) + ": RIFF chunked Vorbis. Decode to raw Wave first, to avoid BASS.DLL troubles");
 						try
@@ -1730,7 +1732,7 @@ namespace FDK
 					}
 				}
 			}
-			// 以下、SharpDX.Multimedia.SoundStreamの生成に失敗した場合の処置
+			// 以下、Vortice.Multimedia.SoundStreamの生成に失敗した場合の処置
 			catch (InvalidDataException e)
 			{
 				// DirectShowでのデコードに失敗したら、次はACMでのデコードを試すことになるため、ここではエラーログを出さない。

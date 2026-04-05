@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 using FDK;
 
-using Color = System.Drawing.Color;
 using Rectangle = System.Drawing.Rectangle;
 using SlimDXKey = SlimDX.DirectInput.Key;
 

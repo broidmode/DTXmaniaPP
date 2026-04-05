@@ -1,33 +1,58 @@
-## What is DTXManiaNX?
-DTXManiaNX is a program that replicates gameplay from Konami's music video game, Gitadora - Drummania/GuitarFreaks. This project was forked from the DTXManiaXG verK SVN repository. It processes DTX files (including older formats such as BMS/BME or GDA/G2D) and allows playing of custom created charts with a use of a game, keyboard or MIDI controller.
+# DTXManiaXYZ
 
-For more information regarding creation of DTX files and its data formats, do visit the original [DTXMania Wiki](https://osdn.net/projects/dtxmania/wiki/DTX%20data%20format). Various video tutorials are available from [APPROVED DTX Gaming's YouTube page](https://youtu.be/9GlSk62pgGw) or [
-Furukon Rhythm Gaming's YouTube page](https://www.youtube.com/playlist?list=PLj22ny7-DS2V-l0pWLhp8cLRYLF3jskCs).
+A drum simulation game that replicates gameplay from Konami's Gitadora (Drummania/GuitarFreaks). Plays DTX chart files (and older formats like BMS/BME, GDA/G2D) using a game controller, electronic drum kit, keyboard, or MIDI controller.
 
-## Original and Ongoing Forks
-* [DTXMania](https://osdn.net/projects/dtxmania) (yyagi)
+## Project Scope
 
-https://osdn.net/projects/dtxmania
+DTXManiaXYZ is a modernization fork of [DTXManiaNX](https://github.com/limyz/DTXmaniaXG), focused on:
 
-* [DTXMania2](https://dtxmania.net) ([ＦＲＯＭ](https://github.com/DTXMania))
+- **High-resolution support** — configurable 720p / 1080p / 1440p / 4K with proper coordinate scaling
+- **High frame rate** — unlocked frame rate with configurable target (120+ FPS), VSync options, and spin-wait frame pacing
+- **Borderless fullscreen** — proper multi-monitor borderless windowed mode
+- **.NET 8 migration** — modern runtime with better JIT, lower GC pauses (in progress)
+- **D3D11 rendering** — future migration from Direct3D 9 to Direct3D 11 via Vortice.Windows (planned)
 
-https://dtxmania.net
+The game is fully playable today on the current codebase. Modernization work is incremental and does not break existing DTX file compatibility.
 
-* [DTXMania AL](http://senamih.com/dtxal) (Sena)
+## Lineage
 
-http://senamih.com/dtxal
+This project descends from a line of community forks:
 
-* [DTXManiaXG verK](https://osdn.net/projects/dtxmaniaxg-verk) ([kairera0467](https://github.com/kairera0467))
+- [DTXMania](https://osdn.net/projects/dtxmania) (yyagi) — the original open-source DTX simulator
+- [DTXMania2](https://dtxmania.net) ([FROM](https://github.com/DTXMania)) — ground-up rewrite by the original author
+- [DTXMania AL](http://senamih.com/dtxal) (Sena)
+- [DTXManiaXG verK](https://osdn.net/projects/dtxmaniaxg-verk) (kairera0467)
+- [DTXManiaNX](https://github.com/limyz/DTXmaniaXG) (limyz/fisyher) — direct parent of this fork
 
-https://osdn.net/projects/dtxmaniaxg-verk
+For information on creating DTX chart files, see the [DTXMania Wiki](https://osdn.net/projects/dtxmania/wiki/DTX%20data%20format).
 
-## Installation
-1. Download the [latest release](https://github.com/limyz/DTXmaniaXG/releases) of DTXMania and extract it to a location of your choice
+## Requirements
 
-2. Download and install the [.NET Framework 4.7.1](https://dotnet.microsoft.com/download/dotnet-framework/net471) (if prompted)
+### To play (prebuilt release)
 
-3. Download and install the [DirectX End-User Runtime (DirectX v9.0c)](https://www.microsoft.com/en-us/download/details.aspx?displaylang=en&id=35)
+1. Windows 10 or later (x64)
+2. [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (download the **.NET Desktop Runtime** installer for Windows x64)
+3. [DirectX End-User Runtime (June 2010)](https://www.microsoft.com/en-us/download/details.aspx?id=35) — required for Direct3D 9
 
-## Community Support
-For additional help or support, ask away in DTXMania on Discord! 
+### To build from source
+
+1. All of the above, plus:
+2. [.NET 8 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) (x64)
+3. Git
+
+## Building
+
+```powershell
+git clone https://github.com/broidmode/DTXManiaXYZ.git
+cd DTXManiaXYZ
+dotnet build DTXMania.sln -c Debug -p:Platform=x64
+```
+
+The build output goes to the `Runtime/` directory. Run `Runtime/DTXManiaNX.exe` to start the game.
+
+DTX chart files go in `Runtime/DTXFiles/` or any folder you configure in the game's options.
+
+## Community
+
+For help or discussion, join the DTXMania Discord:
 [https://discord.gg/ST5MWHe](https://discord.gg/ST5MWHe)

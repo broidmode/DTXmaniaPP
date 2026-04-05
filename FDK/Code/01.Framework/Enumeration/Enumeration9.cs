@@ -21,7 +21,7 @@
 */
 using System.Collections.Generic;
 using System.Globalization;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
 
 namespace SampleFramework
 {
@@ -33,7 +33,7 @@ namespace SampleFramework
             set;
         }
 
-        public AdapterDetails Details
+        public AdapterIdentifier Details
         {
             get;
             set;
@@ -232,17 +232,20 @@ namespace SampleFramework
             Format[] allowedAdapterFormats = { Format.X8R8G8B8, Format.X1R5G5B5, Format.R5G6B5,
                 Format.A2R10G10B10 };
 
-            foreach (AdapterInformation adapter in GraphicsDeviceManager.Direct3D9Object.Adapters)		//
+            var d3d = GraphicsDeviceManager.Direct3D9Object;
+            for (uint adapterIndex = 0; adapterIndex < d3d.AdapterCount; adapterIndex++)
             {
                 AdapterInfo9 info = new AdapterInfo9();
-                info.AdapterOrdinal = adapter.Adapter;
-                info.Details = adapter.Details;
+                info.AdapterOrdinal = (int)adapterIndex;
+                info.Details = d3d.GetAdapterIdentifier(adapterIndex);
 
                 adapterFormats.Clear();
                 foreach (Format adapterFormat in allowedAdapterFormats)
                 {
-                    foreach (DisplayMode displayMode in adapter.GetDisplayModes(adapterFormat))
+                    uint modeCount = d3d.GetAdapterModeCount(adapterIndex, adapterFormat);
+                    for (uint m = 0; m < modeCount; m++)
                     {
+                        DisplayMode displayMode = d3d.EnumAdapterModes(adapterIndex, adapterFormat, m);
                         if (MinimumSettings != null)
                         {
                             if (displayMode.Width < MinimumSettings.BackBufferWidth ||
@@ -258,8 +261,9 @@ namespace SampleFramework
                     }
                 }
 
-                if (!adapterFormats.Contains(adapter.CurrentDisplayMode.Format))
-                    adapterFormats.Add(adapter.CurrentDisplayMode.Format);
+                DisplayMode currentMode = d3d.GetAdapterDisplayMode(adapterIndex);
+                if (!adapterFormats.Contains(currentMode.Format))
+                    adapterFormats.Add(currentMode.Format);
 
                 info.DisplayModes.Sort(DisplayModeComparer9.Comparer);
 
@@ -308,7 +312,7 @@ namespace SampleFramework
                 deviceInfo.DeviceType = deviceType;
                 try
                 {
-                    deviceInfo.Capabilities = GraphicsDeviceManager.Direct3D9Object.GetDeviceCaps(info.AdapterOrdinal, deviceInfo.DeviceType);
+                    deviceInfo.Capabilities = GraphicsDeviceManager.Direct3D9Object.GetDeviceCaps((uint)info.AdapterOrdinal, deviceInfo.DeviceType);
 
                     EnumerateSettingsCombos(info, deviceInfo, adapterFormats);
 
@@ -336,13 +340,13 @@ namespace SampleFramework
                         if (windowed == 0 && adapterInfo.DisplayModes.Count == 0)
                             continue;
 
-                        if (!GraphicsDeviceManager.Direct3D9Object.CheckDeviceType(adapterInfo.AdapterOrdinal, deviceInfo.DeviceType,
-                            adapterFormat, backBufferFormat, (windowed == 1)))
+                        if (GraphicsDeviceManager.Direct3D9Object.CheckDeviceType((uint)adapterInfo.AdapterOrdinal, deviceInfo.DeviceType,
+                            adapterFormat, backBufferFormat, (windowed == 1)).Failure)
                             continue;
 
-                        if (!GraphicsDeviceManager.Direct3D9Object.CheckDeviceFormat(adapterInfo.AdapterOrdinal,
-                            deviceInfo.DeviceType, adapterFormat, Usage.QueryPostPixelShaderBlending,
-                            ResourceType.Texture, backBufferFormat))
+                        if (GraphicsDeviceManager.Direct3D9Object.CheckDeviceFormat((uint)adapterInfo.AdapterOrdinal,
+                            deviceInfo.DeviceType, adapterFormat, (int)Usage.QueryPostPixelShaderBlending,
+                            ResourceType.Texture, backBufferFormat).Failure)
                             continue;
 
                         SettingsCombo9 combo = new SettingsCombo9();
@@ -390,10 +394,10 @@ namespace SampleFramework
 
             foreach (Format format in possibleDepthStencilFormats)
             {
-                if (GraphicsDeviceManager.Direct3D9Object.CheckDeviceFormat(combo.AdapterOrdinal, combo.DeviceType, combo.AdapterFormat,
-                    Usage.DepthStencil, ResourceType.Surface, format) &&
-                    GraphicsDeviceManager.Direct3D9Object.CheckDepthStencilMatch(combo.AdapterOrdinal, combo.DeviceType,
-                    combo.AdapterFormat, combo.BackBufferFormat, format))
+                if (GraphicsDeviceManager.Direct3D9Object.CheckDeviceFormat((uint)combo.AdapterOrdinal, combo.DeviceType, combo.AdapterFormat,
+                    (int)Usage.DepthStencil, ResourceType.Surface, format).Success &&
+                    GraphicsDeviceManager.Direct3D9Object.CheckDepthStencilMatch((uint)combo.AdapterOrdinal, combo.DeviceType,
+                    combo.AdapterFormat, combo.BackBufferFormat, format).Success)
                     combo.DepthStencilFormats.Add(format);
             }
         }
@@ -415,8 +419,8 @@ namespace SampleFramework
             int quality;
             foreach (MultisampleType type in possibleMultisampleTypes)
             {
-                if (GraphicsDeviceManager.Direct3D9Object.CheckDeviceMultisampleType(combo.AdapterOrdinal, combo.DeviceType,
-                    combo.AdapterFormat, combo.Windowed, type, out quality))
+                if (GraphicsDeviceManager.Direct3D9Object.CheckDeviceMultiSampleType((uint)combo.AdapterOrdinal, combo.DeviceType,
+                    combo.AdapterFormat, combo.Windowed, type, out quality).Success)
                 {
                     combo.MultisampleTypes.Add(type);
                     combo.MultisampleQualities.Add(quality);

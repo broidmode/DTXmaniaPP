@@ -176,7 +176,7 @@ namespace FDK
         /// <para>大体はSSTのOn進行とOn描画を合体させたようなものです。</para>
         /// </summary>
         /// <returns>任意の整数。呼び出し元との整合性を合わせておくこと。</returns>
-        public virtual int OnUpdateAndDraw(SharpDX.Direct3D9.Device D3D9Device)
+        public virtual int OnUpdateAndDraw(Device D3D9Device)
         {
             // 活性化してないなら何もしない。
             if (this.bNotActivated)
@@ -193,7 +193,7 @@ namespace FDK
         /// <para>この Activity を活性化（有効化）する。</para>
         /// <para>具体的には内部リソースの初期化などを行う。</para>
         /// </summary>
-        public virtual void OnActivate(SharpDX.Direct3D9.Device D3D9Device)
+        public virtual void OnActivate(Device D3D9Device)
         {
             if (this.bActivated)
                 return;
@@ -223,7 +223,7 @@ namespace FDK
 		/// <para>Direct3D デバイスが作成された直後に呼び出されるので、自分が活性化している時に限り、Managed リソースを作成（または再構築）すること。</para>
 		/// <para>いつどのタイミングで呼び出されるか（いつDirect3Dが再作成されるか）分からないので、いつ何時呼び出されても問題無いようにコーディングしておくこと。</para>
 		/// </summary>
-		public virtual void OnManagedCreateResource( SharpDX.Direct3D9.Device D3D9Device )
+		public virtual void OnManagedCreateResource( Device D3D9Device )
 		{
 			if( this.bNotActivated )
 				return;
@@ -240,7 +240,7 @@ namespace FDK
 		/// <para>Direct3D デバイスが作成またはリセットされた直後に呼び出されるので、自分が活性化している時に限り、Unmanaged リソースを作成（または再構築）すること。</para>
 		/// <para>いつどのタイミングで呼び出されるか（いつDirect3Dが再作成またはリセットされるか）分からないので、いつ何時呼び出されても問題無いようにコーディングしておくこと。</para>
 		/// </summary>
-		public virtual void OnUnmanagedCreateResources( SharpDX.Direct3D9.Device D3D9Device )
+		public virtual void OnUnmanagedCreateResources( Device D3D9Device )
 		{
 			if( this.bNotActivated )
 				return;
@@ -276,7 +276,7 @@ namespace FDK
         /// <para>This method is called between BeginScene() and EndScene(). メソッド内でいきなり描画を行ってかまわない。</para>
         /// <para>ただし、Direct3D デバイスの変更は行ってはならない。</para>
         /// </summary>
-        public virtual void OnDraw(SharpDX.Direct3D9.Device D3D9Device)
+        public virtual void OnDraw(Device D3D9Device)
         {
             if (this.bNotActivated)
                 return;

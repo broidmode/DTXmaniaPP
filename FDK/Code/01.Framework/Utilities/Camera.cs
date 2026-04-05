@@ -19,7 +19,9 @@
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 * THE SOFTWARE.
 */
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 
 namespace SampleFramework
 {
@@ -181,7 +183,7 @@ namespace SampleFramework
         /// </summary>
         protected virtual void RebuildViewMatrix()
         {
-            viewMatrix = Matrix.LookAtLH(Location, Target, Vector3.UnitY);
+            viewMatrix = Matrix.CreateLookAtLeftHanded(Location, Target, Vector3.UnitY);
             viewDirty = false;
         }
 
@@ -190,7 +192,7 @@ namespace SampleFramework
         /// </summary>
         protected virtual void RebuildProjectionMatrix()
         {
-            projectionMatrix = Matrix.PerspectiveFovLH(FieldOfView, AspectRatio, NearPlane, FarPlane);
+            projectionMatrix = Matrix.CreatePerspectiveFieldOfViewLeftHanded(FieldOfView, AspectRatio, NearPlane, FarPlane);
             projectionDirty = false;
         }
     }

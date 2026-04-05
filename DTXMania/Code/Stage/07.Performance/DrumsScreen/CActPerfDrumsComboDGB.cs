@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
@@ -105,7 +105,7 @@ namespace DTXMania
                         if ( this.txComboBom != null && CDTXMania.ConfigIni.bドラムコンボ文字の表示 != false )
                         {
                             this.txComboBom.tDraw2D(CDTXMania.app.Device, x, y, new Rectangle(0, (340 * num1), 360, 340));
-                            this.txComboBom.vcScaleRatio = new SharpDX.Vector3(1.5f, 1.5f, 1f);
+                            this.txComboBom.vcScaleRatio = new Vector3(1.5f, 1.5f, 1f);
                         }
                     }
                 }

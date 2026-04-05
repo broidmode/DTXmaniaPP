@@ -5,7 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using DirectShowLib;
-using SharpDX.Multimedia;
+using Vortice.Multimedia;
 
 namespace FDK
 {

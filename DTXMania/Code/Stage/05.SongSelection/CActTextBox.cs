@@ -157,7 +157,8 @@ namespace DTXMania
 					graphics2.FillRectangle(Brushes.White, 0, 0, bitmap3.Width, bitmap3.Height);
 				}
 				txカーソル = CDTXMania.tGenerateTexture(bitmap3, b黒を透過する: false);
-				txカーソル.nTransparency = 192;
+				if (txカーソル != null)
+					txカーソル.nTransparency = 192;
 			}
 			t文字テクスチャを生成();
 			base.OnManagedCreateResources();
@@ -367,7 +368,8 @@ namespace DTXMania
 					graphics.FillRectangle(Brushes.Black, 0, 0, bitmap.Width, bitmap.Height);
 				}
 				tx背景 = CDTXMania.tGenerateTexture(bitmap);
-				tx背景.nTransparency = 192;
+				if (tx背景 != null)
+					tx背景.nTransparency = 192;
 			}
 		}
 

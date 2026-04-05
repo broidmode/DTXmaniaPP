@@ -1,8 +1,10 @@
 using System;
 using System.Runtime.InteropServices;
 using DirectShowLib;
-using SharpDX;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.Direct3D9;
 
 namespace FDK
 {
@@ -137,9 +139,9 @@ namespace FDK
 			}
 			if (bCopyToCTex && ctex != null)
 			{
-				DataRectangle dataRectangle = ctex.texture.LockRectangle(0, LockFlags.None);
+				LockedRectangle dataRectangle = ctex.texture.LockRect(0, LockFlags.None);
 				DsError.ThrowExceptionForHR(grabber.GetCurrentBuffer(ref pBufferSize, dataRectangle.DataPointer));
-				ctex.texture.UnlockRectangle(0);
+				ctex.texture.UnlockRect(0);
 			}
 		}
 

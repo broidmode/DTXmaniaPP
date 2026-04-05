@@ -5,8 +5,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Un4seen.Bass;
-using SharpDX;
-using SharpDX.DirectSound;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.DirectSound;
 
 namespace FDK
 {
@@ -138,7 +140,7 @@ namespace FDK
 
 			#region [ DirectSound デバイスを作成する。]
 			//-----------------
-			this.DirectSound = new DirectSound();   // 失敗したら例外をそのまま発出。
+			this.DirectSound = DSound.DirectSoundCreate8();   // 失敗したら例外をそのまま発出。
 
 			// デバイスの協調レベルを設定する。
 

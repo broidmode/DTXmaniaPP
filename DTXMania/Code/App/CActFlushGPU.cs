@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
 using FDK;
 
 namespace DTXMania
@@ -23,7 +23,7 @@ namespace DTXMania
 			{
 				try			// #xxxxx 2012.12.31 yyagi: to prepare flush, first of all, I create q queue to the GPU.
 				{
-					IDirect3DQuery9 = new SharpDX.Direct3D9.Query( CDTXMania.app.Device, QueryType.Occlusion );
+					IDirect3DQuery9 = CDTXMania.app.Device.CreateQuery( QueryType.Occlusion );
 				}
 				catch ( Exception e )
 				{
@@ -53,7 +53,7 @@ namespace DTXMania
 
 		#region [ private ]
 		//-----------------
-		private SharpDX.Direct3D9.Query IDirect3DQuery9;
+		private Query IDirect3DQuery9;
 		//-----------------
 		#endregion
 	}

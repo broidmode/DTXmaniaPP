@@ -5,10 +5,11 @@ using System.Diagnostics;
 using System.Text;
 using System.Drawing;
 using System.Threading;
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 using FDK;
 
-using Color = System.Drawing.Color;
 using Rectangle = System.Drawing.Rectangle;
 using RectangleF = System.Drawing.RectangleF;
 using Point = System.Drawing.Point;

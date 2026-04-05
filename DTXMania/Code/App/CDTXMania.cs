@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -10,8 +10,9 @@ using System.IO;
 using System.Threading;
 using System.Runtime;
 using System.Runtime.Serialization.Formatters.Binary;
-using SharpDX;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 using FDK;
 using SampleFramework;
 using DTXMania.Properties;
@@ -459,7 +460,7 @@ namespace DTXMania
             // http://www.gamedev.net/topic/594369-dx9slimdxati-incorrect-saving-surface-to-file/
             using (Surface pSurface = CDTXMania.app.Device.GetRenderTarget(0))
             {
-                Surface.ToFile(pSurface, strFullPath, ImageFileFormat.Png);
+                D3DX9Helpers.SaveSurfaceToFile(pSurface, strFullPath, D3DX9Helpers.D3DXIFF_PNG);
             }
             return true;
         }
@@ -509,8 +510,8 @@ namespace DTXMania
                 Cursor.Hide();
                 this.bマウスカーソル表示中 = false;
             }
-            this.Device.SetTransform(TransformState.View, Matrix.LookAtLH(new Vector3(0f, 0f, (float)(-SampleFramework.GameWindowSize.Height / 2 * Math.Sqrt(3.0))), new Vector3(0f, 0f, 0f), new Vector3(0f, 1f, 0f)));
-            this.Device.SetTransform(TransformState.Projection, Matrix.PerspectiveFovLH(CConversion.DegreeToRadian((float)60f), ((float)SampleFramework.GameWindowSize.Width) / ((float)SampleFramework.GameWindowSize.Height), -100f, 100f));
+            this.Device.SetTransform(TransformState.View, Matrix.CreateLookAtLeftHanded(new Vector3(0f, 0f, (float)(-SampleFramework.GameWindowSize.Height / 2 * Math.Sqrt(3.0))), new Vector3(0f, 0f, 0f), new Vector3(0f, 1f, 0f)));
+            this.Device.SetTransform(TransformState.Projection, D3D9Extensions.PerspectiveFovLH(CConversion.DegreeToRadian((float)60f), ((float)SampleFramework.GameWindowSize.Width) / ((float)SampleFramework.GameWindowSize.Height), -100f, 100f));
             this.Device.SetRenderState(RenderState.Lighting, false);
             this.Device.SetRenderState(RenderState.ZEnable, false);
             this.Device.SetRenderState(RenderState.AntialiasedLineEnable, false);
@@ -518,14 +519,14 @@ namespace DTXMania
             this.Device.SetRenderState(RenderState.AlphaRef, 10);
 
             this.Device.SetRenderState(RenderState.MultisampleAntialias, true);
-            this.Device.SetSamplerState(0, SamplerState.MinFilter, TextureFilter.Linear);
-            this.Device.SetSamplerState(0, SamplerState.MagFilter, TextureFilter.Linear);
+            this.Device.SetSamplerState(0, SamplerState.MinFilter, (int)TextureFilter.Linear);
+            this.Device.SetSamplerState(0, SamplerState.MagFilter, (int)TextureFilter.Linear);
 
             this.Device.SetRenderState<Compare>(RenderState.AlphaFunc, Compare.Greater);
             this.Device.SetRenderState(RenderState.AlphaBlendEnable, true);
             this.Device.SetRenderState<Blend>(RenderState.SourceBlend, Blend.SourceAlpha);
             this.Device.SetRenderState<Blend>(RenderState.DestinationBlend, Blend.InverseSourceAlpha);
-            this.Device.SetTextureStageState(0, TextureStage.AlphaOperation, TextureOperation.Modulate);
+            this.Device.SetTextureStageState(0, TextureStage.AlphaOperation, (int)TextureOperation.Modulate);
             this.Device.SetTextureStageState(0, TextureStage.AlphaArg1, 2);
             this.Device.SetTextureStageState(0, TextureStage.AlphaArg2, 1);
 
@@ -714,7 +715,7 @@ namespace DTXMania
             #endregion
 
             this.Device.BeginScene();
-            this.Device.Clear(ClearFlags.ZBuffer | ClearFlags.Target, SharpDX.Color.Black, 1f, 0);
+            this.Device.Clear(ClearFlags.ZBuffer | ClearFlags.Target, new Vortice.Mathematics.Color(0, 0, 0, 255), 1f, 0);
 
             if (rCurrentStage != null)
             {
@@ -1909,9 +1910,9 @@ for (int i = 0; i < 3; i++) {
                 //Trace.WriteLine( "CTextureをBitmapから生成" );
 				return new CTexture( app.Device, bitmap, TextureFormat, b黒を透過する );
 			}
-			catch ( CTextureCreateFailedException )
+			catch ( CTextureCreateFailedException e )
 			{
-				Trace.TraceError( "テクスチャの生成に失敗しました。(txData)" );
+				Trace.TraceError( "テクスチャの生成に失敗しました。(Bitmap): {0}", e.Message );
 				return null;
 			}
         }
@@ -2430,7 +2431,9 @@ for (int i = 0; i < 3; i++) {
             try
             {
                 var d3dDevice = base.GraphicsDeviceManager.Direct3D9.Device;
-                var adapterOrdinal = d3dDevice.CreationParameters.AdapterOrdinal;
+                var creationParams = default(CreationParameters);
+                d3dDevice.GetCreationParameters(ref creationParams);
+                var adapterOrdinal = creationParams.AdapterOrdinal;
                 var adapterIdentifier = d3dDevice.Direct3D.GetAdapterIdentifier(adapterOrdinal);
                 var presentParams = base.GraphicsDeviceManager.CurrentSettings;
                 Trace.TraceInformation("----------------------");

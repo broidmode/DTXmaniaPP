@@ -4,7 +4,7 @@ using System.Text;
 
 using WindowsKey = System.Windows.Forms.Keys;
 using SlimDXKey = SlimDX.DirectInput.Key;
-using SharpDXKey = SharpDX.DirectInput.Key;
+using SharpDXKey = Vortice.DirectInput.Key;
 
 namespace FDK
 {
@@ -42,7 +42,7 @@ namespace FDK
 
 
 		/// <summary>
-		///		DIK (SharpDX.DirectInput.Key) から SlimDX.DirectInput.Key への変換表。
+		///		DIK (Vortice.DirectInput.Key) から SlimDX.DirectInput.Key への変換表。
 		/// </summary>
 		private static readonly Dictionary<SharpDXKey, SlimDXKey> _DIKtoKey = new Dictionary<SharpDXKey, SlimDXKey>() {
 			#region [ *** ]

@@ -24,8 +24,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Permissions;
-using SharpDX;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using FDK;
 
 namespace SampleFramework
 {
@@ -121,7 +123,7 @@ namespace SampleFramework
             }
 
             elements.Add(VertexElement.VertexDeclarationEnd);
-            return new VertexDeclaration(Device, elements.ToArray());
+            return Device.CreateVertexDeclaration(elements.ToArray());
         }
 
         /// <summary>
@@ -132,7 +134,7 @@ namespace SampleFramework
         /// <returns>The newly created render target surface.</returns>
         public Texture CreateRenderTarget(int width, int height)
         {
-            return new Texture(Device, width, height, 1, Usage.RenderTarget, manager.CurrentSettings.BackBufferFormat, Pool.Default);
+            return Device.CreateTexture((uint)width, (uint)height, 1, Usage.RenderTarget, manager.CurrentSettings.BackBufferFormat, Pool.Default);
         }
 
         /// <summary>
@@ -141,7 +143,7 @@ namespace SampleFramework
         /// <returns>The newly created resolve target.</returns>
         public Texture CreateResolveTarget()
         {
-            return new Texture(Device, manager.ScreenWidth, manager.ScreenHeight, 1, Usage.RenderTarget, manager.CurrentSettings.BackBufferFormat, Pool.Default);
+            return Device.CreateTexture((uint)manager.ScreenWidth, (uint)manager.ScreenHeight, 1, Usage.RenderTarget, manager.CurrentSettings.BackBufferFormat, Pool.Default);
         }
 
         /// <summary>
@@ -170,26 +172,26 @@ namespace SampleFramework
             try
             {
                 // grab the current back buffer
-                Surface backBuffer = Device.GetBackBuffer(0, backBufferIndex);
-                if (backBuffer == null || Result.GetResultFromWin32Error(Marshal.GetLastWin32Error()).Failure)
+                Surface backBuffer = Device.GetBackBuffer(0u, (uint)backBufferIndex, BackBufferType.Mono);
+                if (backBuffer == null || new Result(Marshal.GetHRForLastWin32Error()).Failure)
                     throw new InvalidOperationException("Could not obtain back buffer surface.");
 
                 // grab the destination surface
                 destination = target.GetSurfaceLevel(0);
-                if (destination == null || Result.GetResultFromWin32Error(Marshal.GetLastWin32Error()).Failure)
+                if (destination == null || new Result(Marshal.GetHRForLastWin32Error()).Failure)
                     throw new InvalidOperationException("Could not obtain resolve target surface.");
 
                 // first try to copy using linear filtering
-                Device.StretchRectangle(backBuffer, destination, TextureFilter.Linear);
-                if (Result.GetResultFromWin32Error(Marshal.GetLastWin32Error()).Failure)
+                Device.StretchRectFull(backBuffer, destination, TextureFilter.Linear);
+                if (new Result(Marshal.GetHRForLastWin32Error()).Failure)
                 {
                     // that failed, so try with no filtering
-                    Device.StretchRectangle(backBuffer, destination, TextureFilter.None);
-                    if (Result.GetResultFromWin32Error(Marshal.GetLastWin32Error()).Failure)
+                    Device.StretchRectFull(backBuffer, destination, TextureFilter.None);
+                    if (new Result(Marshal.GetHRForLastWin32Error()).Failure)
                     {
                         // that failed as well, so the last thing we can try is a load surface call
-                        Surface.FromSurface(destination, backBuffer, Filter.Default, 0);
-                        if (Result.GetResultFromWin32Error(Marshal.GetLastWin32Error()).Failure)
+                        Device.StretchRectFull(backBuffer, destination, TextureFilter.None);
+                        if (new Result(Marshal.GetHRForLastWin32Error()).Failure)
                             throw new InvalidOperationException("Could not copy surfaces.");
                     }
                 }
@@ -207,7 +209,7 @@ namespace SampleFramework
         /// </summary>
         public void ResetRenderTarget()
         {
-            Surface backBuffer = Device.GetBackBuffer(0, 0);
+            Surface backBuffer = Device.GetBackBuffer(0u, 0u, BackBufferType.Mono);
 
             try
             {

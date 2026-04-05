@@ -4,11 +4,12 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.IO;
-using SharpDX;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
 using FDK;
 
 using Point = System.Drawing.Point;
-using Color = System.Drawing.Color;
 using Rectangle = System.Drawing.Rectangle;
 
 namespace DTXMania

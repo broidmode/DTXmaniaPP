@@ -1,11 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Drawing;
 using System.IO;
 using System.Diagnostics;
-using SharpDX;
-using SharpDX.Direct3D9;
+using Vortice.Direct3D9;
+using Vortice.Mathematics;
+using System.Numerics;
+using Vortice.Direct3D9;
 using FDK;
 
 using Rectangle = System.Drawing.Rectangle;
@@ -64,7 +66,7 @@ namespace DTXMania
 				this.txパネル本体 = CDTXMania.tGenerateTexture( CSkin.Path( @"Graphics\5_preimage panel.png" ), false );
 				this.txプレビュー画像 = null;
 				this.txプレビュー画像がないときの画像 = CDTXMania.tGenerateTexture( CSkin.Path( @"Graphics\5_preimage default.png" ), false );
-                this.sfAVI画像 = Surface.CreateOffscreenPlain( CDTXMania.app.Device, 0xcc, 0x10d, CDTXMania.app.GraphicsDeviceManager.CurrentSettings.BackBufferFormat, Pool.SystemMemory );
+                this.sfAVI画像 = CDTXMania.app.Device.CreateOffscreenPlainSurface( 0xcc, 0x10d, CDTXMania.app.GraphicsDeviceManager.CurrentSettings.BackBufferFormat, Pool.SystemMemory );
 				this.nAVI再生開始時刻 = -1L;
 				this.n前回描画したフレーム番号 = -1;
 				this.b動画フレームを作成した = false;
@@ -182,18 +184,20 @@ namespace DTXMania
 
 		private unsafe void tサーフェイスをクリアする( Surface sf )
 		{
-			DataRectangle rectangle = sf.LockRectangle( LockFlags.None );
+			LockedRectangle rectangle = sf.LockRect( LockFlags.None );
 			IntPtr dataPointer = rectangle.DataPointer;
-			switch( ( rectangle.Pitch / sf.Description.Width ) )
+			int sfWidth = (int)sf.Description.Width;
+			int sfHeight = (int)sf.Description.Height;
+			switch( ( rectangle.Pitch / sfWidth ) )
 			{
 				case 4:
 					{
 						uint* numPtr = (uint*) dataPointer.ToPointer();
-						for( int i = 0; i < sf.Description.Height; i++ )
+						for( int i = 0; i < sfHeight; i++ )
 						{
-							for( int j = 0; j < sf.Description.Width; j++ )
+							for( int j = 0; j < sfWidth; j++ )
 							{
-								( numPtr + ( i * sf.Description.Width ) )[ j ] = 0;
+								( numPtr + ( i * sfWidth ) )[ j ] = 0;
 							}
 						}
 						break;
@@ -201,17 +205,17 @@ namespace DTXMania
 				case 2:
 					{
 						ushort* numPtr2 = (ushort*) dataPointer.ToPointer();
-						for( int k = 0; k < sf.Description.Height; k++ )
+						for( int k = 0; k < sfHeight; k++ )
 						{
-							for( int m = 0; m < sf.Description.Width; m++ )
+							for( int m = 0; m < sfWidth; m++ )
 							{
-								( numPtr2 + ( k * sf.Description.Width ) )[ m ] = 0;
+								( numPtr2 + ( k * sfWidth ) )[ m ] = 0;
 							}
 						}
 						break;
 					}
 			}
-			sf.UnlockRectangle();
+			sf.UnlockRect();
 		}
 		private void tプレビュー画像_動画の変更()
 		{
@@ -498,9 +502,9 @@ namespace DTXMania
 				{
 					if( this.b動画フレームを作成した && ( this.pAVIBmp != IntPtr.Zero ) )
 					{
-						DataRectangle rectangle = this.sfAVI画像.LockRectangle( LockFlags.None );
+						LockedRectangle rectangle = this.sfAVI画像.LockRect( LockFlags.None );
 						IntPtr dataPointer = rectangle.DataPointer;
-						int num5 = rectangle.Pitch / this.sfAVI画像.Description.Width;
+						int num5 = rectangle.Pitch / (int)this.sfAVI画像.Description.Width;
 						BitmapUtil.BITMAPINFOHEADER* pBITMAPINFOHEADER = (BitmapUtil.BITMAPINFOHEADER*) this.pAVIBmp.ToPointer();
 						if( pBITMAPINFOHEADER->biBitCount == 0x18 )
 						{
@@ -515,14 +519,14 @@ namespace DTXMania
 							//		break;
 							//}
 						}
-						this.sfAVI画像.UnlockRectangle();
+						this.sfAVI画像.UnlockRect();
 						this.b動画フレームを作成した = false;
 					}
-                    x += (z - this.sfAVI画像.Description.Width) / 2;
-                    y += (z - this.sfAVI画像.Description.Height) / 2;
+                    x += (z - (int)this.sfAVI画像.Description.Width) / 2;
+                    y += (z - (int)this.sfAVI画像.Description.Height) / 2;
                     using (Surface surface = CDTXMania.app.Device.GetBackBuffer(0, 0))
                     {
-						CDTXMania.app.Device.UpdateSurface( this.sfAVI画像, new SharpDX.Rectangle( 0, 0, this.sfAVI画像.Description.Width, this.sfAVI画像.Description.Height ), surface, new SharpDX.Point( x, y ) );
+						CDTXMania.app.Device.UpdateSurface( this.sfAVI画像, new Rectangle( 0, 0, (int)this.sfAVI画像.Description.Width, (int)this.sfAVI画像.Description.Height ), surface, new Vortice.Mathematics.Int2( x, y ) );
 						return;
 					}
 				}
