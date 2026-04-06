@@ -1,26 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
-using FDK;
+﻿using FDK;
 
 namespace DTXMania
 {
 	/// <summary>
-	/// Flushes the GPU every frame to prevent rendering latency.
-	/// In D3D11, uses DeviceContext.Flush() combined with DWM.Flush().
+	/// Legacy GPU flush activity. Under D3D11 flip model, explicit flushing
+	/// is unnecessary and can cause stalls. Kept as a no-op for config compatibility.
 	/// </summary>
 	internal class CActFlushGPU : CActivity
 	{
-		// CActivity 実装
-
 		public override int OnUpdateAndDraw()
 		{
-			if ( !base.bNotActivated )
-			{
-				CDTXMania.app.GraphicsDeviceManager.Direct3D9.Context.Flush();
-				DWM.Flush();
-			}
 			return 0;
 		}
 	}

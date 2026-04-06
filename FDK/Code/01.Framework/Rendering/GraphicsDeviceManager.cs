@@ -73,7 +73,7 @@ namespace SampleFramework
 		{
 			get { return new Size(CurrentSettings.BackBufferWidth, CurrentSettings.BackBufferHeight); }
 		}
-		public Direct3D9Manager Direct3D9
+		public CGraphicsDevice GraphicsDevice
 		{
 			get;
 			private set;
@@ -102,7 +102,7 @@ namespace SampleFramework
 			game.FrameStart += game_FrameStart;
 			game.FrameEnd += game_FrameEnd;
 
-			Direct3D9 = new Direct3D9Manager(this);
+			GraphicsDevice = new CGraphicsDevice(this);
 		}
 
 		public void Dispose()
@@ -151,7 +151,7 @@ namespace SampleFramework
 		}
 		public bool EnsureDevice()
 		{
-			return Direct3D9.Device != null;
+			return GraphicsDevice.Device != null;
 		}
 
 		protected virtual void Dispose(bool disposing)
@@ -230,7 +230,7 @@ namespace SampleFramework
 			}
 
 			// Create or resize the D3D11 device
-			if (Direct3D9.Device == null)
+			if (GraphicsDevice.Device == null)
 			{
 				InitializeDevice();
 			}
@@ -356,12 +356,12 @@ namespace SampleFramework
 
 		void game_FrameEnd(object sender, EventArgs e)
 		{
-			if (Direct3D9.SwapChain == null) return;
+			if (GraphicsDevice.SwapChain == null) return;
 
 			try
 			{
 				uint syncInterval = CurrentSettings.EnableVSync ? 1u : 0u;
-				Direct3D9.SwapChain.Present(syncInterval, PresentFlags.None);
+				GraphicsDevice.SwapChain.Present(syncInterval, PresentFlags.None);
 			}
 			catch (Exception ex)
 			{
@@ -371,7 +371,7 @@ namespace SampleFramework
 
 		void game_FrameStart(object sender, CancelEventArgs e)
 		{
-			if (Direct3D9.Device == null)
+			if (GraphicsDevice.Device == null)
 			{
 				e.Cancel = true;
 				return;
@@ -407,8 +407,8 @@ namespace SampleFramework
 					out var featureLevel,
 					out var context);
 
-				Direct3D9.Device = device;
-				Direct3D9.Context = context;
+				GraphicsDevice.Device = device;
+				GraphicsDevice.Context = context;
 
 				Trace.TraceInformation($"D3D11 device created. Feature level: {featureLevel}");
 
@@ -429,18 +429,18 @@ namespace SampleFramework
 					Scaling = Scaling.Stretch,
 				};
 
-				Direct3D9.SwapChain = dxgiFactory.CreateSwapChainForHwnd(
+				GraphicsDevice.SwapChain = dxgiFactory.CreateSwapChainForHwnd(
 					device, game.Window.Handle, swapChainDesc);
 
 				// Disable Alt+Enter fullscreen toggle (we handle it ourselves)
 				dxgiFactory.MakeWindowAssociation(game.Window.Handle, WindowAssociationFlags.IgnoreAltEnter);
 
 				// Create render target view and set viewport
-				Direct3D9.CreateRenderTargetView();
-				Direct3D9.SetViewport(width, height);
+				GraphicsDevice.CreateRenderTargetView();
+				GraphicsDevice.SetViewport(width, height);
 
 				// Create sprite batch
-				Direct3D9.SpriteBatch = new SpriteBatch(device, context);
+				GraphicsDevice.SpriteBatch = new SpriteBatch(device, context);
 
 				CurrentSettings.BackBufferWidth = width;
 				CurrentSettings.BackBufferHeight = height;
@@ -458,7 +458,7 @@ namespace SampleFramework
 
 		void ResizeDevice()
 		{
-			if (Direct3D9.SwapChain == null)
+			if (GraphicsDevice.SwapChain == null)
 			{
 				InitializeDevice();
 				return;
@@ -472,16 +472,16 @@ namespace SampleFramework
 			game.UnloadContent();
 
 			// Release the old render target view before resizing
-			Direct3D9.RenderTargetView?.Dispose();
-			Direct3D9.RenderTargetView = null;
+			GraphicsDevice.RenderTargetView?.Dispose();
+			GraphicsDevice.RenderTargetView = null;
 
 			// Resize the swap chain buffers
-			Direct3D9.SwapChain.ResizeBuffers(
+			GraphicsDevice.SwapChain.ResizeBuffers(
 				0, (uint)width, (uint)height, Format.Unknown, SwapChainFlags.None);
 
 			// Recreate render target view and set viewport
-			Direct3D9.CreateRenderTargetView();
-			Direct3D9.SetViewport(width, height);
+			GraphicsDevice.CreateRenderTargetView();
+			GraphicsDevice.SetViewport(width, height);
 
 			CurrentSettings.BackBufferWidth = width;
 			CurrentSettings.BackBufferHeight = height;
@@ -492,7 +492,7 @@ namespace SampleFramework
 
 		void ReleaseDevice()
 		{
-			if (Direct3D9.Device == null)
+			if (GraphicsDevice.Device == null)
 				return;
 
 			if (game != null)
@@ -501,10 +501,10 @@ namespace SampleFramework
 				game.Dispose(true);
 			}
 
-			Direct3D9.Dispose();
-			Direct3D9.Device = null;
-			Direct3D9.Context = null;
-			Direct3D9.SwapChain = null;
+			GraphicsDevice.Dispose();
+			GraphicsDevice.Device = null;
+			GraphicsDevice.Context = null;
+			GraphicsDevice.SwapChain = null;
 		}
 
 		void UpdateDeviceInformation()

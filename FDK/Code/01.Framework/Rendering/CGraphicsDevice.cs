@@ -28,9 +28,8 @@ namespace SampleFramework
 {
     /// <summary>
     /// Manages the D3D11 device, context, swap chain, and sprite renderer.
-    /// Class name kept as Direct3D9Manager to minimize changes in referencing code.
     /// </summary>
-    public class Direct3D9Manager : IDisposable
+    public class CGraphicsDevice : IDisposable
     {
         GraphicsDeviceManager manager;
 
@@ -59,7 +58,7 @@ namespace SampleFramework
         /// </summary>
         public SpriteBatch SpriteBatch { get; internal set; }
 
-        internal Direct3D9Manager(GraphicsDeviceManager manager)
+        internal CGraphicsDevice(GraphicsDeviceManager manager)
         {
             this.manager = manager;
         }

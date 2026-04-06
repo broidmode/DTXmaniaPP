@@ -306,7 +306,7 @@ namespace DTXMania
 
         public Device Device
         {
-            get { return base.GraphicsDeviceManager.Direct3D9.Device; }
+            get { return base.GraphicsDeviceManager.GraphicsDevice.Device; }
         }
         public CPluginHost PluginHost
         {
@@ -456,7 +456,7 @@ namespace DTXMania
             }
 
             // D3D11: Copy back buffer to staging texture, then save as PNG via System.Drawing
-            var d3d = base.GraphicsDeviceManager.Direct3D9;
+            var d3d = base.GraphicsDeviceManager.GraphicsDevice;
             var backBuffer = d3d.ResolveBackBuffer();
             try
             {
@@ -559,7 +559,7 @@ namespace DTXMania
                 CConversion.DegreeToRadian(60f),
                 (float)SampleFramework.GameWindowSize.Width / (float)SampleFramework.GameWindowSize.Height,
                 -100f, 100f);
-            CTexture.SpriteBatch = base.GraphicsDeviceManager.Direct3D9.SpriteBatch;
+            CTexture.SpriteBatch = base.GraphicsDeviceManager.GraphicsDevice.SpriteBatch;
             // All other render states (lighting, alpha test, blend, sampler) are baked into the SpriteBatch shader/pipeline.
 
             if (this.listTopLevelActivities != null)
@@ -746,7 +746,7 @@ namespace DTXMania
             }
             #endregion
 
-            var d3d = base.GraphicsDeviceManager.Direct3D9;
+            var d3d = base.GraphicsDeviceManager.GraphicsDevice;
             d3d.Context.ClearRenderTargetView(d3d.RenderTargetView, new Color4(0f, 0f, 0f, 1f));
             var presentSettings = base.GraphicsDeviceManager.CurrentSettings;
             var ortho = Matrix.CreateOrthographicOffCenter(0, presentSettings.BackBufferWidth, presentSettings.BackBufferHeight, 0, -1f, 1f);
@@ -2469,7 +2469,7 @@ for (int i = 0; i < 3; i++) {
             #region [ Log graphics device info ]
             try
             {
-                var d3d = base.GraphicsDeviceManager.Direct3D9;
+                var d3d = base.GraphicsDeviceManager.GraphicsDevice;
                 var presentParams = base.GraphicsDeviceManager.CurrentSettings;
                 // Query DXGI adapter for device description
                 string adapterDesc = "Unknown";
