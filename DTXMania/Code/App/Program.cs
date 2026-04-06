@@ -148,9 +148,7 @@ namespace DTXMania
 					{
 						SetDllDirectory(Path.Combine(path, @"dll"));
 					}
-#if !DEBUG
 					try
-#endif
 					{
 						using( var mania = new CDTXMania() )
 							mania.Run();
@@ -158,16 +156,14 @@ namespace DTXMania
 						Trace.WriteLine( "" );
 						Trace.WriteLine( "遊んでくれてありがとう！" );
 					}
-#if !DEBUG
 					catch( Exception e )
 					{
 						Trace.WriteLine( "" );
 						Trace.Write( e.ToString() );
 						Trace.WriteLine( "" );
 						Trace.WriteLine( "エラーだゴメン！（涙" );
-						MessageBox.Show( e.ToString(), "DTXMania Error", MessageBoxButtons.OK, MessageBoxIcon.Error );	// #23670 2011.2.28 yyagi to show error dialog
+						MessageBox.Show( e.ToString(), "DTXMania Error", MessageBoxButtons.OK, MessageBoxIcon.Error );
 					}
-#endif
 					// END #24606 2011.03.08 from
 					// END #23670 2010.11.13 from
 
