@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Drawing;
-using Vortice.Direct3D9;
 using FDK;
 
 namespace DTXMania
@@ -130,11 +129,7 @@ namespace DTXMania
 		{
 			if( !base.bNotActivated )
 			{
-                this.txBGAバックパネル = new CTexture(CDTXMania.app.Device, 278, 355, CDTXMania.app.GraphicsDeviceManager.CurrentSettings.BackBufferFormat, Pool.Managed);
-				using( Surface surface = CDTXMania.app.Device.GetBackBuffer( 0, 0 ) )
-				{
-					this.sfBackBuffer = CDTXMania.app.Device.CreateOffscreenPlainSurface( surface.Description.Width, surface.Description.Height, surface.Description.Format, Pool.SystemMemory );
-				}
+                this.txBGAバックパネル = new CTexture(CDTXMania.app.Device, 278, 355);
 				base.OnManagedCreateResources();
 			}
 		}
@@ -143,11 +138,6 @@ namespace DTXMania
 			if( !base.bNotActivated )
 			{
                 CDTXMania.tReleaseTexture( ref this.txBGAバックパネル );
-				if( this.sfBackBuffer != null )
-				{
-					this.sfBackBuffer.Dispose();
-					this.sfBackBuffer = null;
-				}
 				base.OnManagedReleaseResources();
 			}
 		}
@@ -302,7 +292,6 @@ namespace DTXMania
 
         private CTexture txBGAバックパネル;
 		private readonly EChannel[] nChannel = new EChannel[] { EChannel.BGALayer1, EChannel.BGALayer2, EChannel.BGALayer3, EChannel.BGALayer4, EChannel.BGALayer5, EChannel.BGALayer6, EChannel.BGALayer7, EChannel.BGALayer8 };
-		private Surface sfBackBuffer;
 		private STLAYER[] stLayer = new STLAYER[ 8 ];
 		//-----------------
 		#endregion

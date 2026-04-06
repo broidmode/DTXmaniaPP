@@ -610,7 +610,7 @@ namespace DTXMania
 				{
 					this.txDescriptionPanel.Dispose();
 				}
-				this.txDescriptionPanel = new CTexture( CDTXMania.app.Device, image, CDTXMania.TextureFormat );
+				this.txDescriptionPanel = new CTexture( CDTXMania.app.Device, image, false );
 				this.txDescriptionPanel.vcScaleRatio.X = 0.8f;
 				this.txDescriptionPanel.vcScaleRatio.Y = 0.8f;
 				image.Dispose();
@@ -644,7 +644,7 @@ namespace DTXMania
 				{
 					this.txDescriptionPanel.Dispose();
 				}
-				this.txDescriptionPanel = new CTexture( CDTXMania.app.Device, image, CDTXMania.TextureFormat );
+				this.txDescriptionPanel = new CTexture( CDTXMania.app.Device, image, false );
 				this.txDescriptionPanel.vcScaleRatio.X = 0.8f;
 				this.txDescriptionPanel.vcScaleRatio.Y = 0.8f;
 				image.Dispose();

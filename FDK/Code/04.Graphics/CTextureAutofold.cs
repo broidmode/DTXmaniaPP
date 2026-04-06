@@ -5,76 +5,37 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Diagnostics;
-using Vortice.Direct3D9;
 
 namespace FDK
 {
 	/// <summary>
-	/// 縦長_横長の画像を自動で折りたたんでテクスチャ化するCTexture。
-	/// 例えば、768x30 のテクスチャファイルが入力されたら、
-	/// 内部で256x90 など、2のべき乗サイズに収めるよう、内部でテクスチャ画像を自動的に折り返す。
-	/// 必要に応じて、正方形テクスチャにもする。
-	/// また、t2D描画は、その折り返しを加味して実行する。
+	/// Auto-folds tall/wide images into a more square texture for GPU efficiency.
+	/// For example, a 768x30 texture file gets folded internally to 256x90.
+	/// D3D11 supports non-power-of-two textures natively, but folding still helps
+	/// with very long/narrow images that would waste GPU memory.
 	/// </summary>
 	public class CTextureAf : CTexture, IDisposable
 	{
-
-				/// <summary>
-		/// <para>指定された画像ファイルから Managed テクスチャを作成する。</para>
-		/// <para>利用可能な画像形式は、BMP, JPG, PNG, TGA, DDS, PPM, DIB, HDR, PFM のいずれか。</para>
-		/// </summary>
-		/// <param name="device">Direct3D9 デバイス。</param>
-		/// <param name="strファイル名">画像ファイル名。</param>
-		/// <param name="format">テクスチャのフォーマット。</param>
-		/// <param name="b黒を透過する">画像の黒（0xFFFFFFFF）を透過させるなら true。</param>
-		/// <exception cref="CTextureCreateFailedException">テクスチャの作成に失敗しました。</exception>
-		public CTextureAf( Device device, string strファイル名, Format format, bool b黒を透過する )
-			: this( device, strファイル名, format, b黒を透過する, Pool.Managed )
-		{
-		}
-
 		/// <summary>
-		/// <para>画像ファイルからテクスチャを生成する。</para>
-		/// <para>利用可能な画像形式は、BMP, JPG, PNG, TGA, DDS, PPM, DIB, HDR, PFM のいずれか。</para>
-		/// <para>テクスチャのサイズは、画像のサイズ以上、かつ、D3D9デバイスで生成可能な最小のサイズに自動的に調節される。
-		/// その際、テクスチャの調節後のサイズにあわせた画像の拡大縮小は行わない。</para>
-		/// <para>その他、ミップマップ数は 1、Usage は None、イメージフィルタは Point、ミップマップフィルタは None になる。</para>
+		/// Creates a texture from an image file, auto-folding if beneficial.
 		/// </summary>
-		/// <param name="device">Direct3D9 デバイス。</param>
-		/// <param name="strファイル名">画像ファイル名。</param>
-		/// <param name="format">テクスチャのフォーマット。</param>
-		/// <param name="b黒を透過する">画像の黒（0xFFFFFFFF）を透過させるなら true。</param>
-		/// <param name="pool">テクスチャの管理方法。</param>
-		/// <exception cref="CTextureCreateFailedException">テクスチャの作成に失敗しました。</exception>
-		public CTextureAf( Device device, string strファイル名, Format format, bool b黒を透過する, Pool pool )
+		public CTextureAf( Device device, string strファイル名, bool b黒を透過する )
 		{
-			MakeTexture( device, strファイル名, format, b黒を透過する, pool );
+			MakeTexture( device, strファイル名, b黒を透過する );
 		}
 
-
-
-
-		public new void MakeTexture( Device device, string strファイル名, Format format, bool b黒を透過する, Pool pool )
+		public new void MakeTexture( Device device, string strファイル名, bool b黒を透過する )
 		{
-			if ( !File.Exists( strファイル名 ) )		// #27122 2012.1.13 from: ImageInformation では FileNotFound 例外は返ってこないので、ここで自分でチェックする。わかりやすいログのために。
-				throw new FileNotFoundException( string.Format( "ファイルが存在しません。\n[{0}]", strファイル名 ) );
+			if ( !File.Exists( strファイル名 ) )
+				throw new FileNotFoundException( string.Format( "File not found.\n[{0}]", strファイル名 ) );
 
-			Byte[] _txData = File.ReadAllBytes( strファイル名 );
-			var caps = device.GetDeviceCaps();
-			bool b条件付きでサイズは２の累乗でなくてもOK = ( caps.TextureCaps & TextureCaps.NonPow2Conditional ) != 0;
-			bool bサイズは２の累乗でなければならない = ( caps.TextureCaps & TextureCaps.Pow2 ) != 0;
-			bool b正方形でなければならない = ( caps.TextureCaps & TextureCaps.SquareOnly ) != 0;
-
-			// そもそもこんな最適化をしなくてよいのなら、さっさとbaseに処理を委ねて終了
-			if ( !bサイズは２の累乗でなければならない && b条件付きでサイズは２の累乗でなくてもOK )
+			// Get image dimensions using System.Drawing
+			int orgWidth, orgHeight;
+			using ( var img = Image.FromFile( strファイル名 ) )
 			{
-				//Debug.WriteLine( Path.GetFileName( strファイル名 )  + ": 最適化は不要です。" );
-				base.MakeTexture( device, strファイル名, format, b黒を透過する, pool );
-				return;
+				orgWidth = img.Width;
+				orgHeight = img.Height;
 			}
-
-			var information = D3DX9Helpers.GetImageInfoFromMemory( _txData );
-			int orgWidth = (int)information.Width, orgHeight = (int)information.Height;
 			int w = orgWidth, h = orgHeight, foldtimes;
 
 			#region [ 折りたたみありで最適なテクスチャサイズがどうなるかを確認する(正方形にするかは考慮せず) ]
@@ -84,17 +45,17 @@ namespace FDK
 				if ( !GetFoldedTextureSize( ref w, ref h, out foldtimes ) )
 				{
 //Debug.WriteLine( Path.GetFileName( strファイル名 ) + ": 最適化を断念。" );
-					base.MakeTexture( device, strファイル名, format, b黒を透過する, pool );
+					base.MakeTexture( device, strファイル名, b黒を透過する );
 					return;
 				}
 			}
-			else								// 縦長画像なら
+			else										// 縦長画像なら
 			{
 				this.b横長のテクスチャである = false;
 				if ( !GetFoldedTextureSize( ref h, ref w, out foldtimes ) )	// 縦横入れ替えて呼び出し
 				{
 //Debug.WriteLine( Path.GetFileName( strファイル名 ) + ": 最適化を断念。" );
-					base.MakeTexture( device, strファイル名, format, b黒を透過する, pool );
+					base.MakeTexture( device, strファイル名, b黒を透過する );
 					return;
 				}
 			}
@@ -102,10 +63,7 @@ namespace FDK
 
 //Debug.WriteLine( Path.GetFileName( strファイル名 ) + ": texture最適化結果: width=" + w + ", height=" + h + ", 折りたたみ回数=" + foldtimes );
 			#region [ 折りたたみテクスチャ画像を作り、テクスチャ登録する ]
-			// バイナリ(Byte配列)をBitmapに変換
-			MemoryStream mms = new MemoryStream( _txData );
-			Bitmap bmpOrg = new Bitmap( mms );
-			mms.Close();
+			Bitmap bmpOrg = new Bitmap( strファイル名 );
 
 			Bitmap bmpNew = new Bitmap( w, h );
 			Graphics g = Graphics.FromImage( bmpNew );
@@ -141,7 +99,7 @@ namespace FDK
 			g = null;
 			bmpOrg.Dispose();
 			bmpOrg = null;
-			base.MakeTexture( device, bmpNew, format, b黒を透過する, pool );
+			base.MakeTexture( device, bmpNew, b黒を透過する );
 			bmpNew.Dispose();
 			bmpNew = null;
 			#endregion

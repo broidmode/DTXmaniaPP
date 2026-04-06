@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Text;
 using System.Drawing;
 using System.IO;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using FDK;
@@ -339,7 +338,7 @@ namespace DTXMania
                 {
                     this.tx文字列パネル.Dispose();
                 }
-                this.tx文字列パネル = new CTexture(CDTXMania.app.Device, image, CDTXMania.TextureFormat);
+                this.tx文字列パネル = new CTexture( CDTXMania.app.Device, image, false );
                 this.tx文字列パネル.vcScaleRatio = new Vector3(1f, 1f, 1f);
                 image.Dispose();
             }

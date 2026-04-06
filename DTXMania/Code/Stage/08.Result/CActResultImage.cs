@@ -4,7 +4,6 @@ using System.Text;
 using System.Diagnostics;
 using System.IO;
 using System.Drawing;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using FDK;
@@ -118,7 +117,7 @@ namespace DTXMania
                 Graphics graphics = Graphics.FromImage(bitmap2);
 
                 graphics.Dispose();
-                this.txSongDifficulty = new CTexture(CDTXMania.app.Device, bitmap2, CDTXMania.TextureFormat, false);
+                this.txSongDifficulty = new CTexture( CDTXMania.app.Device, bitmap2, false );
                 bitmap2.Dispose();
                 Bitmap bitmap3 = new Bitmap(100, 100);
                 graphics = Graphics.FromImage(bitmap3);
@@ -159,14 +158,14 @@ namespace DTXMania
                 {
                     graphics.DrawString(string.Format("{0:0.00}", num), this.ftSongDifficultyFont, new SolidBrush(Color.FromArgb(0xba, 0xba, 0xba)), (float)0f, (float)-4f);
                 }
-                this.txSongLevel = new CTexture(CDTXMania.app.Device, bitmap3, CDTXMania.TextureFormat, false);
+                this.txSongLevel = new CTexture( CDTXMania.app.Device, bitmap3, false );
                 graphics.Dispose();
                 bitmap3.Dispose();
                 Bitmap bitmap4 = new Bitmap(0x2a, 0x30);
                 graphics = Graphics.FromImage(bitmap4);
                 int speedTexturePosY = CDTXMania.ConfigIni.nScrollSpeed.Drums * 48 > 20 * 48 ? 20 * 48 : CDTXMania.ConfigIni.nScrollSpeed.Drums * 48;
                 graphics.DrawImage(this.iDrumSpeed, new Rectangle(0, 0, 0x2a, 0x30), new Rectangle(0, speedTexturePosY, 0x2a, 0x30), GraphicsUnit.Pixel);
-                this.txDrumSpeed = new CTexture(CDTXMania.app.Device, bitmap4, CDTXMania.TextureFormat, false);
+                this.txDrumSpeed = new CTexture( CDTXMania.app.Device, bitmap4, false );
                 graphics.Dispose();
                 //graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.Default;
                 bitmap4.Dispose();

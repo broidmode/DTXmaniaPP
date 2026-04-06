@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.Drawing;
 using System.Diagnostics;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using FDK;
@@ -43,8 +42,8 @@ namespace DTXMania
 						//Fix length issue of Artist using the same method used for Song Title
 						int nLargestLengthPx = 510;//510px is the available space for artist in the bar
 						int widthAfterScaling = (int)((ef.Width + 2) * 0.5f);//+2 buffer
-						if (widthAfterScaling > (CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth / 2))
-							widthAfterScaling = CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth / 2;  // 右端断ち切れ仕方ないよね
+						if (widthAfterScaling > (16384 / 2))
+							widthAfterScaling = 16384 / 2;  // D3D11 feature level 11.0 max texture width  // 右端断ち切れ仕方ないよね
 						//Compute horizontal scaling factor
 						float f拡大率X = (widthAfterScaling <= nLargestLengthPx) ? 0.5f : (((float)nLargestLengthPx / (float)widthAfterScaling) * 0.5f);   // 長い文字列は横方向に圧縮。
 																																						//ef.Width
@@ -53,7 +52,7 @@ namespace DTXMania
 						graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
 						graphics.DrawString( this.strArtist, this.ft描画用フォント, Brushes.White, ( float ) 0f, ( float ) 0f );
 						graphics.Dispose();
-						this.txArtist = new CTexture( CDTXMania.app.Device, bitmap2, CDTXMania.TextureFormat );
+						this.txArtist = new CTexture( CDTXMania.app.Device, bitmap2, false );
 						this.txArtist.vcScaleRatio = new Vector3(f拡大率X, 0.5f, 1f );
 						bitmap2.Dispose();
 					}
@@ -72,8 +71,8 @@ namespace DTXMania
 					SizeF ef2 = graphics2.MeasureString( this.strComment, this.ft描画用フォント );
 					Size size = new Size( (int) Math.Ceiling( (double) ef2.Width ), (int) Math.Ceiling( (double) ef2.Height ) );
 					graphics2.Dispose();
-					this.nテクスチャの最大幅 = CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth;
-					int maxTextureHeight = CDTXMania.app.Device.GetDeviceCaps().MaxTextureHeight;
+					this.nテクスチャの最大幅 = 16384;  // D3D11 feature level 11.0
+					int maxTextureHeight = 16384;
 					Bitmap bitmap3 = new Bitmap( size.Width, (int) Math.Ceiling( (double) this.ft描画用フォント.Size ) );
 					graphics2 = Graphics.FromImage( bitmap3 );
 					graphics2.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
@@ -110,7 +109,7 @@ namespace DTXMania
 					graphics2.Dispose();
 					try
 					{
-						this.txComment = new CTexture( CDTXMania.app.Device, bitmap4, CDTXMania.TextureFormat );
+						this.txComment = new CTexture( CDTXMania.app.Device, bitmap4, false );
 						this.txComment.vcScaleRatio = new Vector3( 0.5f, 0.5f, 1f );
 					}
 					catch( CTextureCreateFailedException )

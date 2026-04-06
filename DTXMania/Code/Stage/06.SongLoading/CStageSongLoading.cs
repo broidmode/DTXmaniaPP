@@ -6,10 +6,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.IO;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
-using Vortice.Direct3D9;
 using System.Drawing.Text;
 using FDK;
 

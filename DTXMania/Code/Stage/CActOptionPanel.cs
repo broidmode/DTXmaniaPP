@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text;
 using System.Drawing;
-using Vortice.Direct3D9;
 using FDK;
 
 namespace DTXMania

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Text;
 using System.IO;
 using System.Drawing;
-using Vortice.Direct3D9;
 using FDK;
 
 namespace DTXMania
@@ -27,10 +26,6 @@ namespace DTXMania
 		public Device D3D9Device
 		{
 			get { return (CDTXMania.app != null ) ? CDTXMania.app.Device : null; }
-		}
-		public Format TextureFormat
-		{
-			get { return CDTXMania.TextureFormat; }
 		}
 		public CTimer Timer
 		{

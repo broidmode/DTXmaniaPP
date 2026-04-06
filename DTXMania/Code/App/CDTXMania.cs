@@ -10,7 +10,7 @@ using System.IO;
 using System.Threading;
 using System.Runtime;
 using System.Runtime.Serialization.Formatters.Binary;
-using Vortice.Direct3D9;
+using Vortice.DXGI;
 using Vortice.Mathematics;
 using System.Numerics;
 using FDK;
@@ -28,9 +28,8 @@ namespace DTXMania
         // プロパティ
         public static readonly string VERSION_DISPLAY = "DTX:NX:A:A:2024051900";
         public static readonly string VERSION = "v1.4.2 20240519";
-        public static readonly string D3DXDLL = "d3dx9_43.dll";		// June 2010
-        //public static readonly string D3DXDLL = "d3dx9_42.dll";	// February 2010
-        //public static readonly string D3DXDLL = "d3dx9_41.dll";	// March 2009
+        // D3DX9 DLL is no longer needed — D3D11 handles all rendering
+        //public static readonly string D3DXDLL = "d3dx9_43.dll";
 
         public static CDTXMania app
         {
@@ -283,7 +282,6 @@ namespace DTXMania
             get;
             private set;
         }
-        public static Format TextureFormat = Format.A8R8G8B8;
         internal static IPluginActivity actPluginOccupyingInput = null;  // act現在入力を占有中のプラグイン
         public bool bApplicationActive
         {
@@ -457,10 +455,52 @@ namespace DTXMania
                 }
             }
 
-            // http://www.gamedev.net/topic/594369-dx9slimdxati-incorrect-saving-surface-to-file/
-            using (Surface pSurface = CDTXMania.app.Device.GetRenderTarget(0))
+            // D3D11: Copy back buffer to staging texture, then save as PNG via System.Drawing
+            var d3d = base.GraphicsDeviceManager.Direct3D9;
+            var backBuffer = d3d.ResolveBackBuffer();
+            try
             {
-                D3DX9Helpers.SaveSurfaceToFile(pSurface, strFullPath, D3DX9Helpers.D3DXIFF_PNG);
+                var desc = backBuffer.Description;
+                var staging = d3d.Device.CreateTexture2D(new Vortice.Direct3D11.Texture2DDescription
+                {
+                    Width = desc.Width,
+                    Height = desc.Height,
+                    MipLevels = 1,
+                    ArraySize = 1,
+                    Format = desc.Format,
+                    SampleDescription = new SampleDescription(1, 0),
+                    Usage = Vortice.Direct3D11.ResourceUsage.Staging,
+                    BindFlags = Vortice.Direct3D11.BindFlags.None,
+                    CPUAccessFlags = Vortice.Direct3D11.CpuAccessFlags.Read,
+                });
+                d3d.Context.CopyResource(staging, backBuffer);
+                var mapped = d3d.Context.Map(staging, 0, Vortice.Direct3D11.MapMode.Read);
+                try
+                {
+                    using var bmp = new Bitmap((int)desc.Width, (int)desc.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                    var bmpData = bmp.LockBits(new Rectangle(0, 0, (int)desc.Width, (int)desc.Height), System.Drawing.Imaging.ImageLockMode.WriteOnly, bmp.PixelFormat);
+                    for (int y = 0; y < desc.Height; y++)
+                    {
+                        unsafe
+                        {
+                            Buffer.MemoryCopy(
+                                (byte*)mapped.DataPointer + y * mapped.RowPitch,
+                                (byte*)bmpData.Scan0 + y * bmpData.Stride,
+                                bmpData.Stride, desc.Width * 4);
+                        }
+                    }
+                    bmp.UnlockBits(bmpData);
+                    bmp.Save(strFullPath, System.Drawing.Imaging.ImageFormat.Png);
+                }
+                finally
+                {
+                    d3d.Context.Unmap(staging, 0);
+                    staging.Dispose();
+                }
+            }
+            finally
+            {
+                backBuffer.Dispose();
             }
             return true;
         }
@@ -510,25 +550,17 @@ namespace DTXMania
                 Cursor.Hide();
                 this.bマウスカーソル表示中 = false;
             }
-            this.Device.SetTransform(TransformState.View, Matrix.CreateLookAtLeftHanded(new Vector3(0f, 0f, (float)(-SampleFramework.GameWindowSize.Height / 2 * Math.Sqrt(3.0))), new Vector3(0f, 0f, 0f), new Vector3(0f, 1f, 0f)));
-            this.Device.SetTransform(TransformState.Projection, D3D9Extensions.PerspectiveFovLH(CConversion.DegreeToRadian((float)60f), ((float)SampleFramework.GameWindowSize.Width) / ((float)SampleFramework.GameWindowSize.Height), -100f, 100f));
-            this.Device.SetRenderState(RenderState.Lighting, false);
-            this.Device.SetRenderState(RenderState.ZEnable, false);
-            this.Device.SetRenderState(RenderState.AntialiasedLineEnable, false);
-            this.Device.SetRenderState(RenderState.AlphaTestEnable, true);
-            this.Device.SetRenderState(RenderState.AlphaRef, 10);
-
-            this.Device.SetRenderState(RenderState.MultisampleAntialias, true);
-            this.Device.SetSamplerState(0, SamplerState.MinFilter, (int)TextureFilter.Linear);
-            this.Device.SetSamplerState(0, SamplerState.MagFilter, (int)TextureFilter.Linear);
-
-            this.Device.SetRenderState<Compare>(RenderState.AlphaFunc, Compare.Greater);
-            this.Device.SetRenderState(RenderState.AlphaBlendEnable, true);
-            this.Device.SetRenderState<Blend>(RenderState.SourceBlend, Blend.SourceAlpha);
-            this.Device.SetRenderState<Blend>(RenderState.DestinationBlend, Blend.InverseSourceAlpha);
-            this.Device.SetTextureStageState(0, TextureStage.AlphaOperation, (int)TextureOperation.Modulate);
-            this.Device.SetTextureStageState(0, TextureStage.AlphaArg1, 2);
-            this.Device.SetTextureStageState(0, TextureStage.AlphaArg2, 1);
+            // D3D11: Set up view/projection matrices on CTexture (used by 3D draw paths)
+            CTexture.ViewMatrix = Matrix.CreateLookAtLeftHanded(
+                new Vector3(0f, 0f, (float)(-SampleFramework.GameWindowSize.Height / 2 * Math.Sqrt(3.0))),
+                new Vector3(0f, 0f, 0f),
+                new Vector3(0f, 1f, 0f));
+            CTexture.ProjectionMatrix = D3DX9Helpers.PerspectiveFovLH(
+                CConversion.DegreeToRadian(60f),
+                (float)SampleFramework.GameWindowSize.Width / (float)SampleFramework.GameWindowSize.Height,
+                -100f, 100f);
+            CTexture.SpriteBatch = base.GraphicsDeviceManager.Direct3D9.SpriteBatch;
+            // All other render states (lighting, alpha test, blend, sampler) are baked into the SpriteBatch shader/pipeline.
 
             if (this.listTopLevelActivities != null)
             {
@@ -714,8 +746,11 @@ namespace DTXMania
             }
             #endregion
 
-            this.Device.BeginScene();
-            this.Device.Clear(ClearFlags.ZBuffer | ClearFlags.Target, new Vortice.Mathematics.Color(0, 0, 0, 255), 1f, 0);
+            var d3d = base.GraphicsDeviceManager.Direct3D9;
+            d3d.Context.ClearRenderTargetView(d3d.RenderTargetView, new Color4(0f, 0f, 0f, 1f));
+            var presentSettings = base.GraphicsDeviceManager.CurrentSettings;
+            var ortho = Matrix.CreateOrthographicOffCenter(0, presentSettings.BackBufferWidth, presentSettings.BackBufferHeight, 0, -1f, 1f);
+            CTexture.SpriteBatch.Begin(ortho, d3d.RenderTargetView, presentSettings.BackBufferWidth, presentSettings.BackBufferHeight);
 
             if (rCurrentStage != null)
             {
@@ -1771,8 +1806,7 @@ for (int i = 0; i < 3; i++) {
                         break;
                 }
             }
-            this.Device.EndScene();			// Present()は game.csのOnFrameEnd()に登録された、GraphicsDeviceManager.game_FrameEnd() 内で実行されるので不要
-            // (つまり、Present()は、Draw()完了後に実行される)
+            CTexture.SpriteBatch.End();  // Flush all batched sprites. Present() runs in GraphicsDeviceManager.game_FrameEnd().
 #if !GPUFlushAfterPresent
             if (ConfigIni.bGPUFlushBeforePresent)
                 actFlushGPU.OnUpdateAndDraw();		// Flush GPU	// EndScene()～Present()間 (つまりVSync前) でFlush実行
@@ -1847,10 +1881,15 @@ for (int i = 0; i < 3; i++) {
 			{
 				return null;
 			}
+			if ( !File.Exists( fileName ) )
+			{
+				Trace.TraceWarning( "Texture file not found: {0}", fileName );
+				return null;
+			}
 			try
 			{
                 //Trace.WriteLine("CTextureをFileから生成 + Filename:" + fileName);
-				return new CTexture( app.Device, fileName, TextureFormat, b黒を透過する );
+				return new CTexture( app.Device, fileName, b黒を透過する );
 			}
 			catch ( CTextureCreateFailedException )
 			{
@@ -1886,7 +1925,7 @@ for (int i = 0; i < 3; i++) {
 			}
 			try
 			{
-				return new CTexture( app.Device, txData, TextureFormat, b黒を透過する );
+				return new CTexture( app.Device, txData, b黒を透過する );
 			}
 			catch ( CTextureCreateFailedException )
 			{
@@ -1908,7 +1947,7 @@ for (int i = 0; i < 3; i++) {
 			try
 			{
                 //Trace.WriteLine( "CTextureをBitmapから生成" );
-				return new CTexture( app.Device, bitmap, TextureFormat, b黒を透過する );
+				return new CTexture( app.Device, bitmap, b黒を透過する );
 			}
 			catch ( CTextureCreateFailedException e )
 			{
@@ -1929,7 +1968,7 @@ for (int i = 0; i < 3; i++) {
 			}
 			try
 			{
-				return new CTextureAf( app.Device, fileName, TextureFormat, b黒を透過する );
+				return new CTextureAf( app.Device, fileName, b黒を透過する );
 			}
 			catch ( CTextureCreateFailedException )
 			{
@@ -2418,7 +2457,7 @@ for (int i = 0; i < 3; i++) {
             catch (DeviceCreationException e)
             {
                 Trace.TraceError(e.ToString());
-                MessageBox.Show(e.Message + e.ToString(), "DTXMania failed to boot: DirectX9 Initialize Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(e.Message + e.ToString(), "DTXMania failed to boot: Direct3D Initialize Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 Environment.Exit(-1);
             }
 
@@ -2430,16 +2469,20 @@ for (int i = 0; i < 3; i++) {
             #region [ Log graphics device info ]
             try
             {
-                var d3dDevice = base.GraphicsDeviceManager.Direct3D9.Device;
-                var creationParams = default(CreationParameters);
-                d3dDevice.GetCreationParameters(ref creationParams);
-                var adapterOrdinal = creationParams.AdapterOrdinal;
-                var adapterIdentifier = d3dDevice.Direct3D.GetAdapterIdentifier(adapterOrdinal);
+                var d3d = base.GraphicsDeviceManager.Direct3D9;
                 var presentParams = base.GraphicsDeviceManager.CurrentSettings;
+                // Query DXGI adapter for device description
+                string adapterDesc = "Unknown";
+                try
+                {
+                    using var dxgiDevice = d3d.Device.QueryInterface<Vortice.DXGI.IDXGIDevice>();
+                    using var adapter = dxgiDevice.GetAdapter();
+                    adapterDesc = adapter.Description.Description;
+                }
+                catch { }
                 Trace.TraceInformation("----------------------");
-                Trace.TraceInformation("■ Graphics Device Info");
-                Trace.TraceInformation("  Adapter: {0}", adapterIdentifier.Description);
-                Trace.TraceInformation("  Driver: {0} ({1})", adapterIdentifier.Driver, adapterIdentifier.DriverVersion);
+                Trace.TraceInformation("■ Graphics Device Info (D3D11)");
+                Trace.TraceInformation("  Adapter: {0}", adapterDesc);
                 Trace.TraceInformation("  BackBuffer: {0}x{1}", presentParams.BackBufferWidth, presentParams.BackBufferHeight);
                 Trace.TraceInformation("  Windowed: {0}", presentParams.Windowed);
                 Trace.TraceInformation("  VSync: {0}", ConfigIni.bVerticalSyncWait);

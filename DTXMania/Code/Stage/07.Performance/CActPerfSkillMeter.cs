@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Diagnostics;
 using System.IO;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using FDK;
@@ -438,7 +437,7 @@ namespace DTXMania
 
                 g.Dispose();
 
-                this.txグラフ値自己ベストライン = new CTexture( CDTXMania.app.Device, canvas, CDTXMania.TextureFormat, false );
+                this.txグラフ値自己ベストライン = new CTexture( CDTXMania.app.Device, canvas, false );
             }
             if( this.txグラフ値自己ベストライン != null )
                 this.txグラフ値自己ベストライン.tDraw2D( CDTXMania.app.Device, nGraphBG_XPos[ this.nGraphUsePart ], nGraphBG_YPos );

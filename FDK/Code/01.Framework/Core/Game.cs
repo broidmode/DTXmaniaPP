@@ -23,10 +23,8 @@ using System;
 using System.ComponentModel;
 using System.Threading;
 using System.Windows.Forms;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
-using Vortice.Direct3D9;
 using System.Collections.ObjectModel;
 
 namespace SampleFramework

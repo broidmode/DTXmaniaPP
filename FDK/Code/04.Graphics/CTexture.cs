@@ -5,27 +5,22 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Diagnostics;
-using Vortice.Direct3D9;
-using Vortice.Mathematics;
 using System.Numerics;
+using System.Runtime.InteropServices;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
 
 using Rectangle = System.Drawing.Rectangle;
 
 namespace FDK
 {
 	/// <summary>
-	/// テクスチャを扱うクラス。
-	/// 使用終了時は必ずDispose()してください。Finalize時の自動Disposeはありません。
-	/// Disposeを忘れた場合は、メモリリークに直結します。
-	/// Finalize時にDisposeしない代わりに、Finalize時にテクスチャのDispose漏れを検出し、
-	/// Trace.TraceWarning()でログを出力します。
-	/// see also:
-	/// https://osdn.net/projects/dtxmania/ticket/38036
-	/// https://github.com/sharpdx/SharpDX/pull/192?w=1
+	/// Wraps a D3D11 texture and provides 2D/3D sprite drawing through SpriteBatch.
+	/// Dispose must be called when done; the finalizer detects leaks.
 	/// </summary>
 	public class CTexture : IDisposable
 	{
-		// プロパティ
+		// Properties
 		public bool bAdditiveBlending
 		{
 			get;
@@ -73,26 +68,36 @@ namespace FDK
 			get;
 			private set;
 		}
-		public Format Format
+		public Vortice.DXGI.Format Format
 		{
 			get;
 			protected set;
 		}
 		public Vector3 vcScaleRatio;
-        public string filename;
+		public string filename;
 
-        	// 画面が変わるたび以下のプロパティを設定し治すこと。
+		// Screen scale properties - set once per resolution change.
+		public static Size szLogicalScreen = Size.Empty;
+		public static Size szPhysicalScreen = Size.Empty;
+		public static Rectangle rcPhysicalScreenDrawingArea = Rectangle.Empty;
+		/// <summary>
+		/// Physical / logical screen ratio. Multiply logical coords by this to get physical.
+		/// </summary>
+		public static float fScreenRatio = 1.0f;
 
-        	public static Size szLogicalScreen = Size.Empty;
-        	public static Size szPhysicalScreen = Size.Empty;
-        	public static Rectangle rcPhysicalScreenDrawingArea = Rectangle.Empty;
-        	/// <summary>
-        	/// <para>論理画面を1とする場合の物理画面の倍率。</para>
-        	/// <para>論理値×画面比率＝物理値。</para>
-        	/// </summary>
-        	public static float fScreenRatio = 1.0f;
+		/// <summary>
+		/// Static SpriteBatch reference - set during device initialization.
+		/// </summary>
+		public static SpriteBatch SpriteBatch;
 
-		// コンストラクタ
+		/// <summary>
+		/// View and projection matrices for the 3D (rotation) draw path.
+		/// Set in CDTXMania.LoadContent().
+		/// </summary>
+		public static Matrix4x4 ViewMatrix = Matrix4x4.Identity;
+		public static Matrix4x4 ProjectionMatrix = Matrix4x4.Identity;
+
+		// Constructors
 
 		public CTexture()
 		{
@@ -100,766 +105,463 @@ namespace FDK
 			this.szTextureSize = new Size( 0, 0 );
 			this._Transparency = 0xff;
 			this.texture = null;
-            this.bSharpDXTextureDispose完了済み = true;
-			this.cvPositionColoredVertexies = null;
+			this.bTextureDisposed = true;
 			this.bAdditiveBlending = false;
 			this.fZAxisRotation = 0f;
 			this.vcScaleRatio = new Vector3( 1f, 1f, 1f );
-            this.filename = ""; // DTXMania rev:693bf14b0d83efc770235c788117190d08a4e531
-//			this._txData = null;
+			this.filename = "";
+			this.Format = Vortice.DXGI.Format.B8G8R8A8_UNorm;
 		}
 		
 		/// <summary>
-		/// <para>指定されたビットマップオブジェクトから Managed テクスチャを作成する。</para>
-		/// <para>テクスチャのサイズは、BITMAP画像のサイズ以上、かつ、D3D9デバイスで生成可能な最小のサイズに自動的に調節される。
-		/// その際、テクスチャの調節後のサイズにあわせた画像の拡大縮小は行わない。</para>
-		/// <para>その他、ミップマップ数は 1、Usage は None、Pool は Managed、イメージフィルタは Point、ミップマップフィルタは
-		/// None、カラーキーは 0xFFFFFFFF（完全なる黒を透過）になる。</para>
+		/// Creates a texture from a Bitmap with black (0xFF000000) as transparent color key.
 		/// </summary>
-		/// <param name="device">Direct3D9 デバイス。</param>
-		/// <param name="bitmap">作成元のビットマップ。</param>
-		/// <param name="format">テクスチャのフォーマット。</param>
-		/// <exception cref="CTextureCreateFailedException">テクスチャの作成に失敗しました。</exception>
-		public CTexture( Device device, Bitmap bitmap, Format format )
+		public CTexture( Device device, Bitmap bitmap )
 			: this()
 		{
 			try
 			{
-				this.Format = format;
 				this.szImageSize = new Size( bitmap.Width, bitmap.Height );
-				this.szTextureSize = this.tGetOptimalTextureSizeNotExceedingSpecifiedSize( device, this.szImageSize );
+				this.szTextureSize = this.szImageSize;
 				this.rcFullImage = new Rectangle( 0, 0, this.szImageSize.Width, this.szImageSize.Height );
-
-				using( var stream = new MemoryStream() )
-				{
-					bitmap.Save( stream, ImageFormat.Bmp );
-					stream.Seek( 0L, SeekOrigin.Begin );
-					int colorKey = unchecked( (int) 0xFF000000 );
-					this.texture = D3DX9Helpers.CreateTextureFromStream( device, stream, this.szTextureSize.Width, this.szTextureSize.Height, 1, Usage.None, format, poolvar, D3DX9Helpers.D3DX_FILTER_POINT, D3DX9Helpers.D3DX_FILTER_NONE, colorKey );
-                    this.bSharpDXTextureDispose完了済み = false;
-				}
+				this.texture = CreateTextureFromBitmap( device, bitmap, true );
+				this.bTextureDisposed = false;
 			}
 			catch ( Exception e )
 			{
 				this.Dispose();
-				throw new CTextureCreateFailedException( "ビットマップからのテクスチャの生成に失敗しました。(" + e.Message + ")" );
+				throw new CTextureCreateFailedException( "Failed to create texture from bitmap: " + e.Message );
 			}
 		}
-	
+
 		/// <summary>
-		/// <para>空の Managed テクスチャを作成する。</para>
-		/// <para>テクスチャのサイズは、指定された希望サイズ以上、かつ、D3D9デバイスで生成可能な最小のサイズに自動的に調節される。
-		/// その際、テクスチャの調節後のサイズにあわせた画像の拡大縮小は行わない。</para>
-		/// <para>テクスチャのテクセルデータは未初期化。（おそらくゴミデータが入ったまま。）</para>
-		/// <para>その他、ミップマップ数は 1、Usage は None、イメージフィルタは Point、ミップマップフィルタは None、
-		/// カラーキーは 0x00000000（透過しない）になる。</para>
+		/// Creates an empty texture of the given dimensions.
 		/// </summary>
-		/// <param name="device">Direct3D9 デバイス。</param>
-		/// <param name="n幅">テクスチャの幅（希望値）。</param>
-		/// <param name="n高さ">テクスチャの高さ（希望値）。</param>
-		/// <param name="format">テクスチャのフォーマット。</param>
-		/// <exception cref="CTextureCreateFailedException">テクスチャの作成に失敗しました。</exception>
-		public CTexture( Device device, int n幅, int n高さ, Format format )
-			: this( device, n幅, n高さ, format, Pool.Managed )
+		public CTexture( Device device, int width, int height )
+			: this( device, width, height, false )
 		{
 		}
-		
+
 		/// <summary>
-		/// <para>指定された画像ファイルから Managed テクスチャを作成する。</para>
-		/// <para>利用可能な画像形式は、BMP, JPG, PNG, TGA, DDS, PPM, DIB, HDR, PFM のいずれか。</para>
+		/// Creates an empty texture. If dynamic=true, the texture can be written by the CPU
+		/// (used for video frame targets).
 		/// </summary>
-		/// <param name="device">Direct3D9 デバイス。</param>
-		/// <param name="strファイル名">画像ファイル名。</param>
-		/// <param name="format">テクスチャのフォーマット。</param>
-		/// <param name="b黒を透過する">画像の黒（0xFFFFFFFF）を透過させるなら true。</param>
-		/// <exception cref="CTextureCreateFailedException">テクスチャの作成に失敗しました。</exception>
-		public CTexture( Device device, string strファイル名, Format format, bool b黒を透過する )
-			: this( device, strファイル名, format, b黒を透過する, Pool.Managed )
-		{
-		}
-		public CTexture( Device device, byte[] txData, Format format, bool b黒を透過する )
-			: this( device, txData, format, b黒を透過する, Pool.Managed )
-		{
-		}
-		public CTexture( Device device, Bitmap bitmap, Format format, bool b黒を透過する )
-			: this( device, bitmap, format, b黒を透過する, Pool.Managed )
-		{
-		}
-		
-		/// <summary>
-		/// <para>空のテクスチャを作成する。</para>
-		/// <para>テクスチャのサイズは、指定された希望サイズ以上、かつ、D3D9デバイスで生成可能な最小のサイズに自動的に調節される。
-		/// その際、テクスチャの調節後のサイズにあわせた画像の拡大縮小は行わない。</para>
-		/// <para>テクスチャのテクセルデータは未初期化。（おそらくゴミデータが入ったまま。）</para>
-		/// <para>その他、ミップマップ数は 1、Usage は None、イメージフィルタは Point、ミップマップフィルタは None、
-		/// カラーキーは 0x00000000（透過しない）になる。</para>
-		/// </summary>
-		/// <param name="device">Direct3D9 デバイス。</param>
-		/// <param name="n幅">テクスチャの幅（希望値）。</param>
-		/// <param name="n高さ">テクスチャの高さ（希望値）。</param>
-		/// <param name="format">テクスチャのフォーマット。</param>
-		/// <param name="pool">テクスチャの管理方法。</param>
-		/// <exception cref="CTextureCreateFailedException">テクスチャの作成に失敗しました。</exception>
-		public CTexture( Device device, int n幅, int n高さ, Format format, Pool pool )
-			: this( device, n幅, n高さ, format, pool, Usage.None )
-		{
-		}
-		
-		public CTexture( Device device, int n幅, int n高さ, Format format, Pool pool, Usage usage )
+		public CTexture( Device device, int width, int height, bool dynamic )
 			: this()
 		{
 			try
 			{
-				this.Format = format;
-				this.szImageSize = new Size( n幅, n高さ );
-				this.szTextureSize = this.tGetOptimalTextureSizeNotExceedingSpecifiedSize( device, this.szImageSize );
-				this.rcFullImage = new Rectangle( 0, 0, this.szImageSize.Width, this.szImageSize.Height );
-		
-				using ( var bitmap = new Bitmap( 1, 1 ) )
+				this.szImageSize = new Size( width, height );
+				this.szTextureSize = this.szImageSize;
+				this.rcFullImage = new Rectangle( 0, 0, width, height );
+				
+				var desc = new Texture2DDescription
 				{
-					using ( var graphics = Graphics.FromImage( bitmap ) )
-					{
-						graphics.FillRectangle( Brushes.Black, 0, 0, 1, 1 );
-					}
-					using ( var stream = new MemoryStream() )
-					{
-						bitmap.Save( stream, ImageFormat.Bmp );
-						stream.Seek( 0L, SeekOrigin.Begin );
-#if TEST_Direct3D9Ex
-						pool = poolvar;
-#endif
-						// 中で更にメモリ読み込みし直していて無駄なので、Streamを使うのは止めたいところ
-						this.texture = D3DX9Helpers.CreateTextureFromStream( device, stream, n幅, n高さ, 1, usage, format, pool, D3DX9Helpers.D3DX_FILTER_POINT, D3DX9Helpers.D3DX_FILTER_NONE, 0 );
-                        this.bSharpDXTextureDispose完了済み = false;
-					}
-				}
+					Width = (uint)width,
+					Height = (uint)height,
+					MipLevels = 1,
+					ArraySize = 1,
+					Format = Vortice.DXGI.Format.B8G8R8A8_UNorm,
+					SampleDescription = new SampleDescription( 1, 0 ),
+					Usage = dynamic ? ResourceUsage.Dynamic : ResourceUsage.Default,
+					BindFlags = BindFlags.ShaderResource,
+					CPUAccessFlags = dynamic ? CpuAccessFlags.Write : CpuAccessFlags.None,
+				};
+				var tex = device.CreateTexture2D( desc );
+				var srv = device.CreateShaderResourceView( tex );
+				this.texture = new ShaderResourceTexture { Texture2D = tex, SRV = srv };
+				this.bTextureDisposed = false;
 			}
 			catch
 			{
 				this.Dispose();
-				throw new CTextureCreateFailedException( string.Format( "テクスチャの生成に失敗しました。\n({0}x{1}, {2})", n幅, n高さ, format ) );
+				throw new CTextureCreateFailedException( string.Format( "Failed to create texture ({0}x{1})", width, height ) );
 			}
 		}
 
 		/// <summary>
-		/// <para>画像ファイルからテクスチャを生成する。</para>
-		/// <para>利用可能な画像形式は、BMP, JPG, PNG, TGA, DDS, PPM, DIB, HDR, PFM のいずれか。</para>
-		/// <para>テクスチャのサイズは、画像のサイズ以上、かつ、D3D9デバイスで生成可能な最小のサイズに自動的に調節される。
-		/// その際、テクスチャの調節後のサイズにあわせた画像の拡大縮小は行わない。</para>
-		/// <para>その他、ミップマップ数は 1、Usage は None、イメージフィルタは Point、ミップマップフィルタは None になる。</para>
+		/// Creates a texture from an image file (BMP, JPG, PNG, etc.).
 		/// </summary>
-		/// <param name="device">Direct3D9 デバイス。</param>
-		/// <param name="strファイル名">画像ファイル名。</param>
-		/// <param name="format">テクスチャのフォーマット。</param>
-		/// <param name="b黒を透過する">画像の黒（0xFFFFFFFF）を透過させるなら true。</param>
-		/// <param name="pool">テクスチャの管理方法。</param>
-		/// <exception cref="CTextureCreateFailedException">テクスチャの作成に失敗しました。</exception>
-		public CTexture( Device device, string strファイル名, Format format, bool b黒を透過する, Pool pool )
+		public CTexture( Device device, string filename, bool colorKey )
 			: this()
 		{
-			MakeTexture( device, strファイル名, format, b黒を透過する, pool );
-		}
-		public void MakeTexture( Device device, string strファイル名, Format format, bool b黒を透過する, Pool pool )
-		{
-			if ( !File.Exists( strファイル名 ) )		// #27122 2012.1.13 from: ImageInformation では FileNotFound 例外は返ってこないので、ここで自分でチェックする。わかりやすいログのために。
-				throw new FileNotFoundException( string.Format( "ファイルが存在しません。\n[{0}]", strファイル名 ) );
-
-			Byte[] _txData = File.ReadAllBytes( strファイル名 );
-            this.filename = Path.GetFileName( strファイル名 );
-			MakeTexture( device, _txData, format, b黒を透過する, pool );
+			MakeTexture( device, filename, colorKey );
 		}
 
-		public CTexture( Device device, byte[] txData, Format format, bool b黒を透過する, Pool pool )
+		/// <summary>
+		/// Creates a texture from image data in memory.
+		/// </summary>
+		public CTexture( Device device, byte[] txData, bool colorKey )
 			: this()
 		{
-			MakeTexture( device, txData, format, b黒を透過する, pool );
+			MakeTexture( device, txData, colorKey );
 		}
-		public void MakeTexture( Device device, byte[] txData, Format format, bool b黒を透過する, Pool pool )
+
+		/// <summary>
+		/// Creates a texture from a Bitmap with optional color key.
+		/// </summary>
+		public CTexture( Device device, Bitmap bitmap, bool colorKey )
+			: this()
+		{
+			MakeTexture( device, bitmap, colorKey );
+		}
+
+		// MakeTexture methods (for re-creating on existing CTexture instance)
+
+		public void MakeTexture( Device device, string filename, bool colorKey )
+		{
+			if ( !File.Exists( filename ) )
+				throw new FileNotFoundException( string.Format( "File not found: [{0}]", filename ) );
+
+			byte[] txData = File.ReadAllBytes( filename );
+			this.filename = Path.GetFileName( filename );
+			MakeTexture( device, txData, colorKey );
+		}
+
+		public void MakeTexture( Device device, byte[] txData, bool colorKey )
 		{
 			try
 			{
-				var information = D3DX9Helpers.GetImageInfoFromMemory( txData );
-				this.Format = format;
-				this.szImageSize = new Size( (int)information.Width, (int)information.Height );
-				this.rcFullImage = new Rectangle( 0, 0, this.szImageSize.Width, this.szImageSize.Height );
-				int colorKey = ( b黒を透過する ) ? unchecked( (int) 0xFF000000 ) : 0;
-				this.szTextureSize = this.tGetOptimalTextureSizeNotExceedingSpecifiedSize( device, this.szImageSize );
-#if TEST_Direct3D9Ex
-				pool = poolvar;
-#endif
-				//				lock ( lockobj )
-				//				{
-				//Trace.TraceInformation( "CTexture() start: " );
-				this.texture = D3DX9Helpers.CreateTextureFromMemory( device, txData, this.szImageSize.Width, this.szImageSize.Height, 1, Usage.None, format, pool, D3DX9Helpers.D3DX_FILTER_POINT, D3DX9Helpers.D3DX_FILTER_NONE, colorKey );
-                this.bSharpDXTextureDispose完了済み = false;
-				//Trace.TraceInformation( "CTexture() end:   " );
-				//				}
-			}
-			catch (Exception ex)
-			{
-				System.Diagnostics.Trace.TraceError("MakeTexture(byte[]) failed: {0}\n{1}", ex.Message, ex.StackTrace);
-				this.Dispose();
-				throw new CTextureCreateFailedException( string.Format( "テクスチャの生成に失敗しました。\n{0}", ex.Message ) );
-			}
-		}
-
-		public CTexture( Device device, Bitmap bitmap, Format format, bool b黒を透過する, Pool pool )
-			: this()
-		{
-			MakeTexture( device, bitmap, format, b黒を透過する, pool );
-		}
-		public void MakeTexture( Device device, Bitmap bitmap, Format format, bool b黒を透過する, Pool pool )
-		{
-			try
-			{
-				this.Format = format;
-				this.szImageSize = new Size( bitmap.Width, bitmap.Height );
-				this.rcFullImage = new Rectangle( 0, 0, this.szImageSize.Width, this.szImageSize.Height );
-				int colorKey = ( b黒を透過する ) ? unchecked( (int) 0xFF000000 ) : 0;
-				this.szTextureSize = this.tGetOptimalTextureSizeNotExceedingSpecifiedSize( device, this.szImageSize );
-#if TEST_Direct3D9Ex
-				pool = poolvar;
-#endif
-				//Trace.TraceInformation( "CTExture() start: " );
-				unsafe  // Bitmapの内部データ(a8r8g8b8)を自前でゴリゴリコピーする
+				using ( var ms = new MemoryStream( txData ) )
+				using ( var bitmap = new Bitmap( ms ) )
 				{
-					int tw =
-#if TEST_Direct3D9Ex
-					288;		// 32の倍数にする(グラフによっては2のべき乗にしないとダメかも)
-#else
-					this.szImageSize.Width;
-#endif
-#if TEST_Direct3D9Ex
-					this.texture = device.CreateTexture((uint)tw, (uint)this.sz画像サイズ.Height, 1, Usage.Dynamic, format, Pool.Default);
-#else
-					this.texture = device.CreateTexture((uint)this.szImageSize.Width, (uint)this.szImageSize.Height, 1, Usage.None, format, pool);
-#endif
-					BitmapData srcBufData = bitmap.LockBits( new Rectangle( 0, 0, this.szImageSize.Width, this.szImageSize.Height ), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb );
-					LockedRectangle destDataRectangle = texture.LockRect( 0, LockFlags.Discard );	// None
-#if TEST_Direct3D9Ex
-					byte[] filldata = null;
-					if ( tw > this.sz画像サイズ.Width )
-					{
-						filldata = new byte[ (tw - this.sz画像サイズ.Width) * 4 ];
-					}
-					for ( int y = 0; y < this.sz画像サイズ.Height; y++ )
-					{
-						IntPtr src_scan0 = (IntPtr) ( (Int64) srcBufData.Scan0 + y * srcBufData.Stride );
-						destDataRectangle.Data.WriteRange( src_scan0, this.sz画像サイズ.Width * 4  );
-						if ( tw > this.sz画像サイズ.Width )
-						{
-							destDataRectangle.Data.WriteRange( filldata );
-						}
-					}
-#else
-					IntPtr src_scan0 = (IntPtr) ( (Int64) srcBufData.Scan0 );
-					//destDataRectangle.Data.WriteRange( src_scan0, this.szImageSize.Width * 4 * this.szImageSize.Height );
-					long byteCount = this.szImageSize.Width * 4 * this.szImageSize.Height;
-					Buffer.MemoryCopy(src_scan0.ToPointer(), destDataRectangle.DataPointer.ToPointer(), byteCount, byteCount);
-#endif
-					texture.UnlockRect( 0 );
-					bitmap.UnlockBits( srcBufData );
-                    this.bSharpDXTextureDispose完了済み = false;
+					this.szImageSize = new Size( bitmap.Width, bitmap.Height );
+					this.szTextureSize = this.szImageSize;
+					this.rcFullImage = new Rectangle( 0, 0, this.szImageSize.Width, this.szImageSize.Height );
+					this.texture = CreateTextureFromBitmap( device, bitmap, colorKey );
+					this.bTextureDisposed = false;
 				}
-				//Trace.TraceInformation( "CTExture() End: " );
 			}
-			catch (Exception ex)
+			catch ( Exception ex )
 			{
-				System.Diagnostics.Trace.TraceError("MakeTexture(Bitmap) failed: {0}\n{1}", ex.Message, ex.StackTrace);
+				Trace.TraceError( "MakeTexture(byte[]) failed: {0}\n{1}", ex.Message, ex.StackTrace );
 				this.Dispose();
-				throw new CTextureCreateFailedException( string.Format( "テクスチャの生成に失敗しました。\n{0}", ex.Message ) );
+				throw new CTextureCreateFailedException( "Failed to create texture: " + ex.Message );
 			}
 		}
-		// メソッド
 
-		/// <summary>
-		/// テクスチャを 2D 画像と見なして描画する。
-		/// </summary>
-		/// <param name="device">Direct3D9 デバイス。</param>
-		/// <param name="x">描画位置（テクスチャの左上位置の X 座標[dot]）。</param>
-		/// <param name="y">描画位置（テクスチャの左上位置の Y 座標[dot]）。</param>
+		public void MakeTexture( Device device, Bitmap bitmap, bool colorKey )
+		{
+			try
+			{
+				this.szImageSize = new Size( bitmap.Width, bitmap.Height );
+				this.szTextureSize = this.szImageSize;
+				this.rcFullImage = new Rectangle( 0, 0, this.szImageSize.Width, this.szImageSize.Height );
+				this.texture = CreateTextureFromBitmap( device, bitmap, colorKey );
+				this.bTextureDisposed = false;
+			}
+			catch ( Exception ex )
+			{
+				Trace.TraceError( "MakeTexture(Bitmap) failed: {0}\n{1}", ex.Message, ex.StackTrace );
+				this.Dispose();
+				throw new CTextureCreateFailedException( "Failed to create texture: " + ex.Message );
+			}
+		}
+
+		// Draw methods
+
 		public void tDraw2D( Device device, int x, int y )
 		{
 			this.tDraw2D( device, x, y, 1f, this.rcFullImage );
 		}
-		public void tDraw2D( Device device, int x, int y, Rectangle rc画像内の描画領域 )
+		public void tDraw2D( Device device, int x, int y, Rectangle rc )
 		{
-			this.tDraw2D( device, x, y, 1f, rc画像内の描画領域 );
+			this.tDraw2D( device, x, y, 1f, rc );
 		}
-        public void tDraw2D( Device device, float x, float y )
+		public void tDraw2D( Device device, float x, float y )
 		{
-			this.tDraw2D( device, (int)x, (int)y, 1f, this.rcFullImage );
+			this.tDraw2D( device, (int) x, (int) y, 1f, this.rcFullImage );
 		}
-		public void tDraw2D( Device device, float x, float y, Rectangle rc画像内の描画領域 )
+		public void tDraw2D( Device device, float x, float y, Rectangle rc )
 		{
-			this.tDraw2D( device, (int)x, (int)y, 1f, rc画像内の描画領域 );
+			this.tDraw2D( device, (int) x, (int) y, 1f, rc );
 		}
-		public void tDraw2D( Device device, int x, int y, float depth, Rectangle rc画像内の描画領域 )
+		public void tDraw2D( Device device, int x, int y, float depth, Rectangle rc )
 		{
-            if (this.texture == null)
-                return;
+			if ( this.texture == null || SpriteBatch == null )
+				return;
 
-			this.tRenderStateSettings( device );
-
-			if( this.fZAxisRotation == 0f )
+			if ( this.fZAxisRotation == 0f )
 			{
-				#region [ (A) 回転なし ]
-				//-----------------
-				float fx = x * CTexture.fScreenRatio + CTexture.rcPhysicalScreenDrawingArea.X - 0.5f;	// -0.5 は座標とピクセルの誤差を吸収するための座標補正値。(MSDN参照)
-				float fy = y * CTexture.fScreenRatio + CTexture.rcPhysicalScreenDrawingArea.Y - 0.5f;	//
-				float w = rc画像内の描画領域.Width * this.vcScaleRatio.X * CTexture.fScreenRatio;
-				float h = rc画像内の描画領域.Height * this.vcScaleRatio.Y * CTexture.fScreenRatio;
-				float f左U値 = ( (float) rc画像内の描画領域.Left ) / ( (float) this.szTextureSize.Width );
-				float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
-				float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
-				float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-				this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
-				int color = (int)this.color4.ToRgba();
+				// No rotation: screen-space quad
+				float fx = x * fScreenRatio + rcPhysicalScreenDrawingArea.X;
+				float fy = y * fScreenRatio + rcPhysicalScreenDrawingArea.Y;
+				float w = rc.Width * this.vcScaleRatio.X * fScreenRatio;
+				float h = rc.Height * this.vcScaleRatio.Y * fScreenRatio;
+				float uL = (float) rc.Left / (float) this.szTextureSize.Width;
+				float uR = (float) rc.Right / (float) this.szTextureSize.Width;
+				float vT = (float) rc.Top / (float) this.szTextureSize.Height;
+				float vB = (float) rc.Bottom / (float) this.szTextureSize.Height;
+				float alpha = (float) this._Transparency / 255f;
+				var color = new Vector4( 1f, 1f, 1f, alpha );
 
-				if( this.cvTransformedColoredVertexies == null )
-					this.cvTransformedColoredVertexies = new TransformedColoredTexturedVertex[ 4 ];
+				if ( this.spriteQuad == null )
+					this.spriteQuad = new SpriteVertex[ 4 ];
 
-				// #27122 2012.1.13 from: 以下、マネージドオブジェクト（＝ガベージ）の量産を抑えるため、new は使わず、メンバに値を１つずつ直接上書きする。
+				this.spriteQuad[ 0 ] = new SpriteVertex( new Vector3( fx, fy, depth ), color, new Vector2( uL, vT ) );
+				this.spriteQuad[ 1 ] = new SpriteVertex( new Vector3( fx + w, fy, depth ), color, new Vector2( uR, vT ) );
+				this.spriteQuad[ 2 ] = new SpriteVertex( new Vector3( fx, fy + h, depth ), color, new Vector2( uL, vB ) );
+				this.spriteQuad[ 3 ] = new SpriteVertex( new Vector3( fx + w, fy + h, depth ), color, new Vector2( uR, vB ) );
 
-				this.cvTransformedColoredVertexies[ 0 ].Position.X = fx;
-				this.cvTransformedColoredVertexies[ 0 ].Position.Y = fy;
-				this.cvTransformedColoredVertexies[ 0 ].Position.Z = depth;
-				this.cvTransformedColoredVertexies[ 0 ].Position.W = 1.0f;
-				this.cvTransformedColoredVertexies[ 0 ].Color = color;
-				this.cvTransformedColoredVertexies[ 0 ].TextureCoordinates.X = f左U値;
-				this.cvTransformedColoredVertexies[ 0 ].TextureCoordinates.Y = f上V値;
-
-				this.cvTransformedColoredVertexies[ 1 ].Position.X = fx + w;
-				this.cvTransformedColoredVertexies[ 1 ].Position.Y = fy;
-				this.cvTransformedColoredVertexies[ 1 ].Position.Z = depth;
-				this.cvTransformedColoredVertexies[ 1 ].Position.W = 1.0f;
-				this.cvTransformedColoredVertexies[ 1 ].Color = color;
-				this.cvTransformedColoredVertexies[ 1 ].TextureCoordinates.X = f右U値;
-				this.cvTransformedColoredVertexies[ 1 ].TextureCoordinates.Y = f上V値;
-
-				this.cvTransformedColoredVertexies[ 2 ].Position.X = fx;
-				this.cvTransformedColoredVertexies[ 2 ].Position.Y = fy + h;
-				this.cvTransformedColoredVertexies[ 2 ].Position.Z = depth;
-				this.cvTransformedColoredVertexies[ 2 ].Position.W = 1.0f;
-				this.cvTransformedColoredVertexies[ 2 ].Color = color;
-				this.cvTransformedColoredVertexies[ 2 ].TextureCoordinates.X = f左U値;
-				this.cvTransformedColoredVertexies[ 2 ].TextureCoordinates.Y = f下V値;
-
-				this.cvTransformedColoredVertexies[ 3 ].Position.X = fx + w;
-				this.cvTransformedColoredVertexies[ 3 ].Position.Y = fy + h;
-				this.cvTransformedColoredVertexies[ 3 ].Position.Z = depth;
-				this.cvTransformedColoredVertexies[ 3 ].Position.W = 1.0f;
-				this.cvTransformedColoredVertexies[ 3 ].Color = color;
-				this.cvTransformedColoredVertexies[ 3 ].TextureCoordinates.X = f右U値;
-				this.cvTransformedColoredVertexies[ 3 ].TextureCoordinates.Y = f下V値;
-				
-				device.SetTexture( 0, this.texture );
-				device.VertexFormat = TransformedColoredTexturedVertex.Format;
-				device.DrawUserPrimitives( PrimitiveType.TriangleStrip, 0, 2, this.cvTransformedColoredVertexies );
-				//-----------------
-				#endregion
+				SpriteBatch.Draw( this.texture.SRV, this.spriteQuad, this.bAdditiveBlending );
 			}
 			else
 			{
-				#region [ (B) 回転あり ]
-				//-----------------
-				float f補正値X = ( ( rc画像内の描画領域.Width % 2 ) == 0 ) ? -0.5f : 0f;	// -0.5 は座標とピクセルの誤差を吸収するための座標補正値。(MSDN参照)
-				float f補正値Y = ( ( rc画像内の描画領域.Height % 2 ) == 0 ) ? -0.5f : 0f;	// 3D（回転する）なら補正はいらない。
-				float f中央X = ( (float) rc画像内の描画領域.Width ) / 2f;
-				float f中央Y = ( (float) rc画像内の描画領域.Height ) / 2f;
-				float f左U値 = ( (float) rc画像内の描画領域.Left ) / ( (float) this.szTextureSize.Width );
-				float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
-				float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
-				float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-				this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
-				int color = (int)this.color4.ToRgba();
+				// Rotation: world-space quad centered at origin, transformed by WVP
+				float halfW = (float) rc.Width / 2f;
+				float halfH = (float) rc.Height / 2f;
+				float uL = (float) rc.Left / (float) this.szTextureSize.Width;
+				float uR = (float) rc.Right / (float) this.szTextureSize.Width;
+				float vT = (float) rc.Top / (float) this.szTextureSize.Height;
+				float vB = (float) rc.Bottom / (float) this.szTextureSize.Height;
+				float alpha = (float) this._Transparency / 255f;
+				var color = new Vector4( 1f, 1f, 1f, alpha );
 
-				if( this.cvPositionColoredVertexies == null )
-					this.cvPositionColoredVertexies = new PositionColoredTexturedVertex[ 4 ];
+				if ( this.spriteQuad == null )
+					this.spriteQuad = new SpriteVertex[ 4 ];
 
-				// #27122 2012.1.13 from: 以下、マネージドオブジェクト（＝ガベージ）の量産を抑えるため、new は使わず、メンバに値を１つずつ直接上書きする。
+				this.spriteQuad[ 0 ] = new SpriteVertex( new Vector3( -halfW, halfH, depth ), color, new Vector2( uL, vT ) );
+				this.spriteQuad[ 1 ] = new SpriteVertex( new Vector3( halfW, halfH, depth ), color, new Vector2( uR, vT ) );
+				this.spriteQuad[ 2 ] = new SpriteVertex( new Vector3( -halfW, -halfH, depth ), color, new Vector2( uL, vB ) );
+				this.spriteQuad[ 3 ] = new SpriteVertex( new Vector3( halfW, -halfH, depth ), color, new Vector2( uR, vB ) );
 
-				this.cvPositionColoredVertexies[ 0 ].Position.X = -f中央X + f補正値X;
-				this.cvPositionColoredVertexies[ 0 ].Position.Y = f中央Y + f補正値Y;
-				this.cvPositionColoredVertexies[ 0 ].Position.Z = depth;
-				this.cvPositionColoredVertexies[ 0 ].Color = color;
-				this.cvPositionColoredVertexies[ 0 ].TextureCoordinates.X = f左U値;
-				this.cvPositionColoredVertexies[ 0 ].TextureCoordinates.Y = f上V値;
+				int cx = x + ( rc.Width / 2 );
+				int cy = y + ( rc.Height / 2 );
+				var translation = new Vector3(
+					cx - ( (float) SampleFramework.GameWindowSize.Width / 2f ),
+					-( cy - ( (float) SampleFramework.GameWindowSize.Height / 2f ) ),
+					0f );
 
-				this.cvPositionColoredVertexies[ 1 ].Position.X = f中央X + f補正値X;
-				this.cvPositionColoredVertexies[ 1 ].Position.Y = f中央Y + f補正値Y;
-				this.cvPositionColoredVertexies[ 1 ].Position.Z = depth;
-				this.cvPositionColoredVertexies[ 1 ].Color = color;
-				this.cvPositionColoredVertexies[ 1 ].TextureCoordinates.X = f右U値;
-				this.cvPositionColoredVertexies[ 1 ].TextureCoordinates.Y = f上V値;
+				var world = Matrix4x4.Identity * Matrix4x4.CreateScale( this.vcScaleRatio );
+				world *= Matrix4x4.CreateRotationZ( this.fZAxisRotation );
+				world *= Matrix4x4.CreateTranslation( translation );
+				var wvp = world * ViewMatrix * ProjectionMatrix;
 
-				this.cvPositionColoredVertexies[ 2 ].Position.X = -f中央X + f補正値X;
-				this.cvPositionColoredVertexies[ 2 ].Position.Y = -f中央Y + f補正値Y;
-				this.cvPositionColoredVertexies[ 2 ].Position.Z = depth;
-				this.cvPositionColoredVertexies[ 2 ].Color = color;
-				this.cvPositionColoredVertexies[ 2 ].TextureCoordinates.X = f左U値;
-				this.cvPositionColoredVertexies[ 2 ].TextureCoordinates.Y = f下V値;
-
-				this.cvPositionColoredVertexies[ 3 ].Position.X = f中央X + f補正値X;
-				this.cvPositionColoredVertexies[ 3 ].Position.Y = -f中央Y + f補正値Y;
-				this.cvPositionColoredVertexies[ 3 ].Position.Z = depth;
-				this.cvPositionColoredVertexies[ 3 ].Color = color;
-				this.cvPositionColoredVertexies[ 3 ].TextureCoordinates.X = f右U値;
-				this.cvPositionColoredVertexies[ 3 ].TextureCoordinates.Y = f下V値;
-
-				int n描画領域内X = x + ( rc画像内の描画領域.Width / 2 );
-				int n描画領域内Y = y + ( rc画像内の描画領域.Height / 2 );
-				var vc3移動量 = new Vector3( n描画領域内X - ( (float) SampleFramework.GameWindowSize.Width / 2f ), -( n描画領域内Y - ( (float) SampleFramework.GameWindowSize.Height / 2f ) ), 0f );
-				
-				var matrix = Matrix4x4.Identity * Matrix4x4.CreateScale( this.vcScaleRatio );
-				matrix *= Matrix4x4.CreateRotationZ( this.fZAxisRotation );
-				matrix *= Matrix4x4.CreateTranslation( vc3移動量 );
-				device.SetTransform( D3D9Extensions.TransformState_World, matrix );
-
-				device.SetTexture( 0, this.texture );
-				device.VertexFormat = TransformedColoredTexturedVertex.Format;
-				device.DrawUserPrimitives( PrimitiveType.TriangleStrip, 2, this.cvPositionColoredVertexies );
-				//-----------------
-				#endregion
+				SpriteBatch.Draw3D( this.texture.SRV, this.spriteQuad, this.bAdditiveBlending, wvp );
 			}
 		}
+
 		public void tDraw2DUpsideDown( Device device, int x, int y )
 		{
 			this.tDraw2DUpsideDown( device, x, y, 1f, this.rcFullImage );
 		}
-		public void tDraw2DUpsideDown( Device device, int x, int y, Rectangle rc画像内の描画領域 )
+		public void tDraw2DUpsideDown( Device device, int x, int y, Rectangle rc )
 		{
-			this.tDraw2DUpsideDown( device, x, y, 1f, rc画像内の描画領域 );
+			this.tDraw2DUpsideDown( device, x, y, 1f, rc );
 		}
-		public void tDraw2DUpsideDown( Device device, int x, int y, float depth, Rectangle rc画像内の描画領域 )
+		public void tDraw2DUpsideDown( Device device, int x, int y, float depth, Rectangle rc )
 		{
-            if( this.texture == null )
-				throw new InvalidOperationException( "テクスチャは生成されていません。" );
+			if ( this.texture == null || SpriteBatch == null )
+				return;
 
-			this.tRenderStateSettings( device );
+			float fx = x * fScreenRatio + rcPhysicalScreenDrawingArea.X;
+			float fy = y * fScreenRatio + rcPhysicalScreenDrawingArea.Y;
+			float w = rc.Width * this.vcScaleRatio.X * fScreenRatio;
+			float h = rc.Height * this.vcScaleRatio.Y * fScreenRatio;
+			float uL = (float) rc.Left / (float) this.szTextureSize.Width;
+			float uR = (float) rc.Right / (float) this.szTextureSize.Width;
+			float vT = (float) rc.Top / (float) this.szTextureSize.Height;
+			float vB = (float) rc.Bottom / (float) this.szTextureSize.Height;
+			float alpha = (float) this._Transparency / 255f;
+			var color = new Vector4( 1f, 1f, 1f, alpha );
 
-			float fx = x * CTexture.fScreenRatio + CTexture.rcPhysicalScreenDrawingArea.X - 0.5f;	// -0.5 は座標とピクセルの誤差を吸収するための座標補正値。(MSDN参照)
-			float fy = y * CTexture.fScreenRatio + CTexture.rcPhysicalScreenDrawingArea.Y - 0.5f;	//
-			float w = rc画像内の描画領域.Width * this.vcScaleRatio.X * CTexture.fScreenRatio;
-			float h = rc画像内の描画領域.Height * this.vcScaleRatio.Y * CTexture.fScreenRatio;
-			float f左U値 = ( (float) rc画像内の描画領域.Left ) / ( (float) this.szTextureSize.Width );
-			float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
-			float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
-			float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-			this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
-			int color = (int)this.color4.ToRgba();
+			if ( this.spriteQuad == null )
+				this.spriteQuad = new SpriteVertex[ 4 ];
 
-            if( this.cvTransformedColoredVertexies == null )
-			    this.cvTransformedColoredVertexies = new TransformedColoredTexturedVertex[ 4 ];
+			// Flipped V coordinates: top-left gets bottom V, bottom-left gets top V
+			this.spriteQuad[ 0 ] = new SpriteVertex( new Vector3( fx, fy, depth ), color, new Vector2( uL, vB ) );
+			this.spriteQuad[ 1 ] = new SpriteVertex( new Vector3( fx + w, fy, depth ), color, new Vector2( uR, vB ) );
+			this.spriteQuad[ 2 ] = new SpriteVertex( new Vector3( fx, fy + h, depth ), color, new Vector2( uL, vT ) );
+			this.spriteQuad[ 3 ] = new SpriteVertex( new Vector3( fx + w, fy + h, depth ), color, new Vector2( uR, vT ) );
 
-			// 以下、マネージドオブジェクトの量産を抑えるため new は使わない。
-
-			this.cvTransformedColoredVertexies[ 0 ].TextureCoordinates.X = f左U値;	// 左上	→ 左下
-			this.cvTransformedColoredVertexies[ 0 ].TextureCoordinates.Y = f下V値;
-			this.cvTransformedColoredVertexies[ 0 ].Position.X = fx;
-			this.cvTransformedColoredVertexies[ 0 ].Position.Y = fy;
-			this.cvTransformedColoredVertexies[ 0 ].Position.Z = depth;
-			this.cvTransformedColoredVertexies[ 0 ].Position.W = 1.0f;
-			this.cvTransformedColoredVertexies[ 0 ].Color = color;
-
-			this.cvTransformedColoredVertexies[ 1 ].TextureCoordinates.X = f右U値;	// 右上 → 右下
-			this.cvTransformedColoredVertexies[ 1 ].TextureCoordinates.Y = f下V値;
-			this.cvTransformedColoredVertexies[ 1 ].Position.X = fx + w;
-			this.cvTransformedColoredVertexies[ 1 ].Position.Y = fy;
-			this.cvTransformedColoredVertexies[ 1 ].Position.Z = depth;
-			this.cvTransformedColoredVertexies[ 1 ].Position.W = 1.0f;
-			this.cvTransformedColoredVertexies[ 1 ].Color = color;
-
-			this.cvTransformedColoredVertexies[ 2 ].TextureCoordinates.X = f左U値;	// 左下 → 左上
-			this.cvTransformedColoredVertexies[ 2 ].TextureCoordinates.Y = f上V値;
-			this.cvTransformedColoredVertexies[ 2 ].Position.X = fx;
-			this.cvTransformedColoredVertexies[ 2 ].Position.Y = fy + h;
-			this.cvTransformedColoredVertexies[ 2 ].Position.Z = depth;
-			this.cvTransformedColoredVertexies[ 2 ].Position.W = 1.0f;
-			this.cvTransformedColoredVertexies[ 2 ].Color = color;
-
-			this.cvTransformedColoredVertexies[ 3 ].TextureCoordinates.X = f右U値;	// 右下 → 右上
-			this.cvTransformedColoredVertexies[ 3 ].TextureCoordinates.Y = f上V値;
-			this.cvTransformedColoredVertexies[ 3 ].Position.X = fx + w;
-			this.cvTransformedColoredVertexies[ 3 ].Position.Y = fy + h;
-			this.cvTransformedColoredVertexies[ 3 ].Position.Z = depth;
-			this.cvTransformedColoredVertexies[ 3 ].Position.W = 1.0f;
-			this.cvTransformedColoredVertexies[ 3 ].Color = color;
-
-			device.SetTexture( 0, this.texture );
-			device.VertexFormat = TransformedColoredTexturedVertex.Format;
-			device.DrawUserPrimitives( PrimitiveType.TriangleStrip, 2, this.cvTransformedColoredVertexies );
+			SpriteBatch.Draw( this.texture.SRV, this.spriteQuad, this.bAdditiveBlending );
 		}
 
-		/// <summary>
-		/// テクスチャを 3D 画像と見なして描画する。
-		/// </summary>
 		public void tDraw3D( Device device, Matrix mat )
 		{
 			this.tDraw3D( device, mat, this.rcFullImage );
 		}
-		public void tDraw3D( Device device, Matrix mat, Rectangle rc画像内の描画領域 )
+		public void tDraw3D( Device device, Matrix mat, Rectangle rc )
 		{
-			if( this.texture == null )
+			if ( this.texture == null || SpriteBatch == null )
 				return;
 
-			float x = ( (float) rc画像内の描画領域.Width ) / 2f;
-			float y = ( (float) rc画像内の描画領域.Height ) / 2f;
-			float z = 0.0f;
-			float f左U値 = ( (float) rc画像内の描画領域.Left ) / ( (float) this.szTextureSize.Width );
-			float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
-			float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
-			float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-			this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
-			int color = (int)this.color4.ToRgba();
-			
-			if( this.cvPositionColoredVertexies == null )
-				this.cvPositionColoredVertexies = new PositionColoredTexturedVertex[ 4 ];
+			float halfW = (float) rc.Width / 2f;
+			float halfH = (float) rc.Height / 2f;
+			float uL = (float) rc.Left / (float) this.szTextureSize.Width;
+			float uR = (float) rc.Right / (float) this.szTextureSize.Width;
+			float vT = (float) rc.Top / (float) this.szTextureSize.Height;
+			float vB = (float) rc.Bottom / (float) this.szTextureSize.Height;
+			float alpha = (float) this._Transparency / 255f;
+			var color = new Vector4( 1f, 1f, 1f, alpha );
 
-			// #27122 2012.1.13 from: 以下、マネージドオブジェクト（＝ガベージ）の量産を抑えるため、new は使わず、メンバに値を１つずつ直接上書きする。
+			if ( this.spriteQuad == null )
+				this.spriteQuad = new SpriteVertex[ 4 ];
 
-			this.cvPositionColoredVertexies[ 0 ].Position.X = -x;
-			this.cvPositionColoredVertexies[ 0 ].Position.Y = y;
-			this.cvPositionColoredVertexies[ 0 ].Position.Z = z;
-			this.cvPositionColoredVertexies[ 0 ].Color = color;
-			this.cvPositionColoredVertexies[ 0 ].TextureCoordinates.X = f左U値;
-			this.cvPositionColoredVertexies[ 0 ].TextureCoordinates.Y = f上V値;
+			this.spriteQuad[ 0 ] = new SpriteVertex( new Vector3( -halfW, halfH, 0f ), color, new Vector2( uL, vT ) );
+			this.spriteQuad[ 1 ] = new SpriteVertex( new Vector3( halfW, halfH, 0f ), color, new Vector2( uR, vT ) );
+			this.spriteQuad[ 2 ] = new SpriteVertex( new Vector3( -halfW, -halfH, 0f ), color, new Vector2( uL, vB ) );
+			this.spriteQuad[ 3 ] = new SpriteVertex( new Vector3( halfW, -halfH, 0f ), color, new Vector2( uR, vB ) );
 
-			this.cvPositionColoredVertexies[ 1 ].Position.X = x;
-			this.cvPositionColoredVertexies[ 1 ].Position.Y = y;
-			this.cvPositionColoredVertexies[ 1 ].Position.Z = z;
-			this.cvPositionColoredVertexies[ 1 ].Color = color;
-			this.cvPositionColoredVertexies[ 1 ].TextureCoordinates.X = f右U値;
-			this.cvPositionColoredVertexies[ 1 ].TextureCoordinates.Y = f上V値;
-
-			this.cvPositionColoredVertexies[ 2 ].Position.X = -x;
-			this.cvPositionColoredVertexies[ 2 ].Position.Y = -y;
-			this.cvPositionColoredVertexies[ 2 ].Position.Z = z;
-			this.cvPositionColoredVertexies[ 2 ].Color = color;
-			this.cvPositionColoredVertexies[ 2 ].TextureCoordinates.X = f左U値;
-			this.cvPositionColoredVertexies[ 2 ].TextureCoordinates.Y = f下V値;
-
-			this.cvPositionColoredVertexies[ 3 ].Position.X = x;
-			this.cvPositionColoredVertexies[ 3 ].Position.Y = -y;
-			this.cvPositionColoredVertexies[ 3 ].Position.Z = z;
-			this.cvPositionColoredVertexies[ 3 ].Color = color;
-			this.cvPositionColoredVertexies[ 3 ].TextureCoordinates.X = f右U値;
-			this.cvPositionColoredVertexies[ 3 ].TextureCoordinates.Y = f下V値;
-
-			this.tRenderStateSettings( device );
-
-			device.SetTransform( D3D9Extensions.TransformState_World, mat );
-			device.SetTexture( 0, this.texture );
-			device.VertexFormat = PositionColoredTexturedVertex.Format;
-			device.DrawUserPrimitives( PrimitiveType.TriangleStrip, 2, this.cvPositionColoredVertexies );
+			var wvp = mat * ViewMatrix * ProjectionMatrix;
+			SpriteBatch.Draw3D( this.texture.SRV, this.spriteQuad, this.bAdditiveBlending, wvp );
 		}
 
-        public void tDraw3DTopLeftReference( Device device, Matrix mat )
+		public void tDraw3DTopLeftReference( Device device, Matrix mat )
 		{
 			this.tDraw3DTopLeftReference( device, mat, this.rcFullImage );
 		}
-		/// <summary>
-		/// ○覚書
-		///   SharpDX.Matrix mat = SharpDX.Matrix.Identity;
-		///   mat *= SharpDX.Matrix.Translation( x, y, z );
-		/// 「mat =」ではなく「mat *=」であることを忘れないこと。
-		/// </summary>
-		public void tDraw3DTopLeftReference( Device device, Matrix mat, Rectangle rc画像内の描画領域 )
+		public void tDraw3DTopLeftReference( Device device, Matrix mat, Rectangle rc )
 		{
-			//とりあえず補正値などは無し。にしても使う機会少なさそうだなー____
-			if( this.texture == null )
+			if ( this.texture == null || SpriteBatch == null )
 				return;
 
-			float x = 0.0f;
-			float y = 0.0f;
-			float z = 0.0f;
-			float f左U値 = ( (float) rc画像内の描画領域.Left ) / ( (float) this.szTextureSize.Width );
-			float f右U値 = ( (float) rc画像内の描画領域.Right ) / ( (float) this.szTextureSize.Width );
-			float f上V値 = ( (float) rc画像内の描画領域.Top ) / ( (float) this.szTextureSize.Height );
-			float f下V値 = ( (float) rc画像内の描画領域.Bottom ) / ( (float) this.szTextureSize.Height );
-			this.color4 = new Color4( 1f, 1f, 1f, ( (float) this._Transparency ) / 255f );
-			int color = (int)this.color4.ToRgba();
-			
-			if( this.cvPositionColoredVertexies == null )
-				this.cvPositionColoredVertexies = new PositionColoredTexturedVertex[ 4 ];
+			float w = (float) rc.Width;
+			float h = (float) rc.Height;
+			float uL = (float) rc.Left / (float) this.szTextureSize.Width;
+			float uR = (float) rc.Right / (float) this.szTextureSize.Width;
+			float vT = (float) rc.Top / (float) this.szTextureSize.Height;
+			float vB = (float) rc.Bottom / (float) this.szTextureSize.Height;
+			float alpha = (float) this._Transparency / 255f;
+			var color = new Vector4( 1f, 1f, 1f, alpha );
 
-			// #27122 2012.1.13 from: 以下、マネージドオブジェクト（＝ガベージ）の量産を抑えるため、new は使わず、メンバに値を１つずつ直接上書きする。
+			if ( this.spriteQuad == null )
+				this.spriteQuad = new SpriteVertex[ 4 ];
 
-			this.cvPositionColoredVertexies[ 0 ].Position.X = -x;
-			this.cvPositionColoredVertexies[ 0 ].Position.Y = y;
-			this.cvPositionColoredVertexies[ 0 ].Position.Z = z;
-			this.cvPositionColoredVertexies[ 0 ].Color = color;
-			this.cvPositionColoredVertexies[ 0 ].TextureCoordinates.X = f左U値;
-			this.cvPositionColoredVertexies[ 0 ].TextureCoordinates.Y = f上V値;
+			// Top-left reference: vertices start at origin, extend right/down
+			this.spriteQuad[ 0 ] = new SpriteVertex( new Vector3( 0f, 0f, 0f ), color, new Vector2( uL, vT ) );
+			this.spriteQuad[ 1 ] = new SpriteVertex( new Vector3( w, 0f, 0f ), color, new Vector2( uR, vT ) );
+			this.spriteQuad[ 2 ] = new SpriteVertex( new Vector3( 0f, -h, 0f ), color, new Vector2( uL, vB ) );
+			this.spriteQuad[ 3 ] = new SpriteVertex( new Vector3( w, -h, 0f ), color, new Vector2( uR, vB ) );
 
-			this.cvPositionColoredVertexies[ 1 ].Position.X = x;
-			this.cvPositionColoredVertexies[ 1 ].Position.Y = y;
-			this.cvPositionColoredVertexies[ 1 ].Position.Z = z;
-			this.cvPositionColoredVertexies[ 1 ].Color = color;
-			this.cvPositionColoredVertexies[ 1 ].TextureCoordinates.X = f右U値;
-			this.cvPositionColoredVertexies[ 1 ].TextureCoordinates.Y = f上V値;
-
-			this.cvPositionColoredVertexies[ 2 ].Position.X = -x;
-			this.cvPositionColoredVertexies[ 2 ].Position.Y = -y;
-			this.cvPositionColoredVertexies[ 2 ].Position.Z = z;
-			this.cvPositionColoredVertexies[ 2 ].Color = color;
-			this.cvPositionColoredVertexies[ 2 ].TextureCoordinates.X = f左U値;
-			this.cvPositionColoredVertexies[ 2 ].TextureCoordinates.Y = f下V値;
-
-			this.cvPositionColoredVertexies[ 3 ].Position.X = x;
-			this.cvPositionColoredVertexies[ 3 ].Position.Y = -y;
-			this.cvPositionColoredVertexies[ 3 ].Position.Z = z;
-			this.cvPositionColoredVertexies[ 3 ].Color = color;
-			this.cvPositionColoredVertexies[ 3 ].TextureCoordinates.X = f右U値;
-			this.cvPositionColoredVertexies[ 3 ].TextureCoordinates.Y = f下V値;
-
-			this.tRenderStateSettings( device );
-
-			device.SetTransform( D3D9Extensions.TransformState_World, mat );
-			device.SetTexture( 0, this.texture );
-			device.VertexFormat = PositionColoredTexturedVertex.Format;
-			device.DrawUserPrimitives( PrimitiveType.TriangleStrip, 2, this.cvPositionColoredVertexies );
+			var wvp = mat * ViewMatrix * ProjectionMatrix;
+			SpriteBatch.Draw3D( this.texture.SRV, this.spriteQuad, this.bAdditiveBlending, wvp );
 		}
 
-		#region [ IDisposable 実装 ]
+		#region [ IDisposable ]
 		//-----------------
 		public void Dispose()
 		{
-			this.Dispose(true);
-			GC.SuppressFinalize(this);
+			this.Dispose( true );
+			GC.SuppressFinalize( this );
 		}
-		protected void Dispose(bool disposeManagedObjects)
+		protected void Dispose( bool disposeManagedObjects )
 		{
-			if (this.bDispose完了済み)
+			if ( this.bDisposed )
 				return;
 
-			if (disposeManagedObjects)
+			if ( disposeManagedObjects )
 			{
-				// (A) Managed リソースの解放
-				// テクスチャの破棄 (SharpDXのテクスチャは、SharpDX側で管理されるため、FDKからはmanagedリソースと見做す)
-				if (this.texture != null)
+				if ( this.texture != null )
 				{
 					this.texture.Dispose();
 					this.texture = null;
-					this.bSharpDXTextureDispose完了済み = true;
+					this.bTextureDisposed = true;
 				}
 			}
 
-			// (B) Unamanaged リソースの解放
-
-
-			this.bDispose完了済み = true;
+			this.bDisposed = true;
 		}
 		~CTexture()
 		{
-			// ファイナライザの動作時にtextureのDisposeがされていない場合は、
-			// CTextureのDispose漏れと見做して警告をログ出力する
-			if (!this.bSharpDXTextureDispose完了済み)
+			if ( !this.bTextureDisposed )
 			{
-                Trace.TraceWarning("CTexture: Dispose漏れを検出しました。(Size=({0}, {1}), filename={2})", szImageSize.Width, szImageSize.Height, filename );
+				Trace.TraceWarning( "CTexture: Dispose leak detected. (Size=({0}, {1}), filename={2})", szImageSize.Width, szImageSize.Height, filename );
 			}
-			this.Dispose(false);
+			this.Dispose( false );
 		}
 		//-----------------
 		#endregion
 
-
-		// その他
 
 		#region [ private ]
 		//-----------------
 		private int _Transparency;
-        private bool bDispose完了済み, bSharpDXTextureDispose完了済み;
-		protected PositionColoredTexturedVertex[] cvPositionColoredVertexies;
-        protected TransformedColoredTexturedVertex[] cvTransformedColoredVertexies;
-		private const Pool poolvar =												// 2011.4.25 yyagi
-#if TEST_Direct3D9Ex
-			Pool.Default;
-#else
-			Pool.Managed;
-#endif
-//		byte[] _txData;
+		private bool bDisposed, bTextureDisposed;
+		private SpriteVertex[] spriteQuad;
 		static object lockobj = new object();
 
-		private void tRenderStateSettings( Device device )
+		protected Rectangle rcFullImage;
+		protected Color4 color4 = new Color4( 1f, 1f, 1f, 1f );
+
+		/// <summary>
+		/// Creates a D3D11 texture from a System.Drawing.Bitmap.
+		/// Optionally applies a color key making black (RGB=0,0,0) pixels transparent.
+		/// </summary>
+		private static unsafe ShaderResourceTexture CreateTextureFromBitmap( Device device, Bitmap bitmap, bool colorKey )
 		{
-			if( this.bAdditiveBlending )
+			int w = bitmap.Width;
+			int h = bitmap.Height;
+
+			BitmapData bmpData = bitmap.LockBits(
+				new Rectangle( 0, 0, w, h ),
+				ImageLockMode.ReadOnly,
+				PixelFormat.Format32bppArgb );
+
+			try
 			{
-				device.SetRenderState( RenderState.AlphaBlendEnable, true );
-				device.SetRenderState( RenderState.SourceBlend, Blend.SourceAlpha );				// 5
-				device.SetRenderState( RenderState.DestinationBlend, Blend.One );					// 2
+				if ( colorKey )
+				{
+					// Copy pixels and apply color key
+					int byteCount = h * bmpData.Stride;
+					byte[] pixels = new byte[ byteCount ];
+					Marshal.Copy( bmpData.Scan0, pixels, 0, byteCount );
+					ApplyColorKey( pixels );
+
+					fixed ( byte* pPixels = pixels )
+					{
+						var initData = new SubresourceData( (IntPtr) pPixels, (uint)bmpData.Stride );
+						return CreateSRTexture( device, w, h, initData );
+					}
+				}
+				else
+				{
+					var initData = new SubresourceData( bmpData.Scan0, (uint)bmpData.Stride );
+					return CreateSRTexture( device, w, h, initData );
+				}
 			}
-			else
+			finally
 			{
-				device.SetRenderState( RenderState.AlphaBlendEnable, true );
-				device.SetRenderState( RenderState.SourceBlend, Blend.SourceAlpha );				// 5
-				device.SetRenderState( RenderState.DestinationBlend, Blend.InverseSourceAlpha );	// 6
+				bitmap.UnlockBits( bmpData );
 			}
 		}
-		private Size tGetOptimalTextureSizeNotExceedingSpecifiedSize( Device device, Size sz指定サイズ )
+
+		private static ShaderResourceTexture CreateSRTexture( Device device, int w, int h, SubresourceData initData )
 		{
-			var caps = device.GetDeviceCaps();
-			bool b条件付きでサイズは２の累乗でなくてもOK = ( caps.TextureCaps & TextureCaps.NonPow2Conditional ) != 0;
-			bool bサイズは２の累乗でなければならない = ( caps.TextureCaps & TextureCaps.Pow2 ) != 0;
-			bool b正方形でなければならない = ( caps.TextureCaps & TextureCaps.SquareOnly ) != 0;
-			int n最大幅 = caps.MaxTextureWidth;
-			int n最大高 = caps.MaxTextureHeight;
-			var szSize = new Size( sz指定サイズ.Width, sz指定サイズ.Height );
-			
-			if( bサイズは２の累乗でなければならない && !b条件付きでサイズは２の累乗でなくてもOK )
+			var desc = new Texture2DDescription
 			{
-				// 幅を２の累乗にする
-				int n = 1;
-				do
-				{
-					n *= 2;
-				}
-				while( n <= sz指定サイズ.Width );
-				sz指定サイズ.Width = n;
-
-				// 高さを２の累乗にする
-				n = 1;
-				do
-				{
-					n *= 2;
-				}
-				while( n <= sz指定サイズ.Height );
-				sz指定サイズ.Height = n;
-			}
-
-			if( sz指定サイズ.Width > n最大幅 )
-				sz指定サイズ.Width = n最大幅;
-
-			if( sz指定サイズ.Height > n最大高 )
-				sz指定サイズ.Height = n最大高;
-
-			if( b正方形でなければならない )
-			{
-				if( szSize.Width > szSize.Height )
-				{
-					szSize.Height = szSize.Width;
-				}
-				else if( szSize.Width < szSize.Height )
-				{
-					szSize.Width = szSize.Height;
-				}
-			}
-
-			return szSize;
+				Width = (uint)w,
+				Height = (uint)h,
+				MipLevels = 1,
+				ArraySize = 1,
+				Format = Vortice.DXGI.Format.B8G8R8A8_UNorm,
+				SampleDescription = new SampleDescription( 1, 0 ),
+				Usage = ResourceUsage.Immutable,
+				BindFlags = BindFlags.ShaderResource,
+			};
+			var tex = device.CreateTexture2D( desc, new[] { initData } );
+			var srv = device.CreateShaderResourceView( tex );
+			return new ShaderResourceTexture { Texture2D = tex, SRV = srv };
 		}
 
-		
-		// 2012.3.21 さらなる new の省略作戦
-
-		protected Rectangle rcFullImage;								// テクスチャ作ったらあとは不変
-		protected Color4 color4 = new Color4( 1f, 1f, 1f, 1f ); // アルファ以外は不変
-																//-----------------
-		#endregion
-
-		#region " Win32 API "
-		//-----------------
-		// CopyMemory P/Invoke removed — .NET 8 doesn't resolve it from kernel32.dll.
-		// Using Buffer.MemoryCopy instead.
+		/// <summary>
+		/// Makes pure black pixels (R=0, G=0, B=0) fully transparent.
+		/// Pixel data is in BGRA format (Format32bppArgb on little-endian x86).
+		/// </summary>
+		private static unsafe void ApplyColorKey( byte[] pixels )
+		{
+			fixed ( byte* p = pixels )
+			{
+				for ( int i = 0; i < pixels.Length; i += 4 )
+				{
+					// BGRA layout: p[i]=B, p[i+1]=G, p[i+2]=R, p[i+3]=A
+					if ( p[ i ] == 0 && p[ i + 1 ] == 0 && p[ i + 2 ] == 0 )
+					{
+						p[ i + 3 ] = 0; // Set alpha to transparent
+					}
+				}
+			}
+		}
 		//-----------------
 		#endregion
 	}

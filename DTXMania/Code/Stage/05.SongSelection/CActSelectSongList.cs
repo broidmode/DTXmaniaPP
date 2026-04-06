@@ -8,7 +8,6 @@ using System.Drawing.Imaging;
 using System.Diagnostics;
 using System.Drawing.Text;
 using System.IO;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using FDK;
@@ -594,7 +593,7 @@ namespace DTXMania
 					graphics.DrawString( s3[c], this.ftSongListFont, Brushes.DarkGray, (float) 2f, (float) 86f );
 					graphics.DrawString( s3[c], this.ftSongListFont, Brushes.White, (float) 0f, (float) 84f );
 
-					this.txSongNotFound = new CTexture( CDTXMania.app.Device, image, CDTXMania.TextureFormat );
+					this.txSongNotFound = new CTexture( CDTXMania.app.Device, image, false );
 
 					this.txSongNotFound.vcScaleRatio = new Vector3( 0.5f, 0.5f, 1f );	// 半分のサイズで表示する。
 				}
@@ -618,7 +617,7 @@ namespace DTXMania
 					graphics.DrawString( s2[c], this.ftSongListFont, Brushes.DarkGray, (float) 2f, (float) 44f );
 					graphics.DrawString( s2[c], this.ftSongListFont, Brushes.White, (float) 0f, (float) 42f );
 
-					this.txEnumeratingSongs = new CTexture( CDTXMania.app.Device, image, CDTXMania.TextureFormat );
+					this.txEnumeratingSongs = new CTexture( CDTXMania.app.Device, image, false );
 
 					this.txEnumeratingSongs.vcScaleRatio = new Vector3( 0.5f, 0.5f, 1f );	// 半分のサイズで表示する。
 				}
@@ -1617,8 +1616,8 @@ namespace DTXMania
 				int n最大幅px = 510;
 				int height = 0x25;
 				int width = (int) ( ( sz曲名.Width + 2 ) * 0.5f );
-				if( width > ( CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth / 2 ) )
-					width = CDTXMania.app.Device.GetDeviceCaps().MaxTextureWidth / 2;	// 右端断ち切れ仕方ないよね
+				if( width > ( 16384 / 2 ) )
+					width = 16384 / 2;  // D3D11 feature level 11.0 max texture width	// 右端断ち切れ仕方ないよね
 
 				float f拡大率X = ( width <= n最大幅px ) ? 0.5f : ( ( (float) n最大幅px / (float) width ) * 0.5f );	// 長い文字列は横方向に圧縮。
 
@@ -1632,7 +1631,7 @@ namespace DTXMania
 
 					CDTXMania.t安全にDisposeする( ref this.stBarInformation[ nバー番号 ].txTitleName );
 
-					this.stBarInformation[ nバー番号 ].txTitleName = new CTexture( CDTXMania.app.Device, bmp, CDTXMania.TextureFormat );
+					this.stBarInformation[ nバー番号 ].txTitleName = new CTexture( CDTXMania.app.Device, bmp, false );
 					this.stBarInformation[ nバー番号 ].txTitleName.vcScaleRatio = new Vector3( f拡大率X, 0.5f, 1f );
 
                     g.Dispose();

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using Vortice.Direct3D9;
 using FDK;
 
 namespace DTXMania
@@ -53,7 +52,7 @@ namespace DTXMania
                     this.frameheight = (uint)this.rAVI.avi.nフレーム高さ;
                     if (this.tx描画用 == null)
                     {
-                        this.tx描画用 = new CTexture(CDTXMania.app.Device, (int)this.framewidth, (int)this.frameheight, CDTXMania.app.GraphicsDeviceManager.CurrentSettings.BackBufferFormat, Pool.Managed);
+                        this.tx描画用 = new CTexture( CDTXMania.app.Device, (int)this.framewidth, (int)this.frameheight, true );
                     }
 
                     if (fClipアスペクト比 < 1.77f)

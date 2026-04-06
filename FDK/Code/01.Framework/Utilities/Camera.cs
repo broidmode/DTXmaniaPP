@@ -19,7 +19,6 @@
 * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 * THE SOFTWARE.
 */
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 

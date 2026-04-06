@@ -94,11 +94,7 @@ namespace DTXMania
 					"FDK.dll またはその依存するdllが存在しません。" + newLine + "DTXManiaをダウンロードしなおしてください。",
 					"FDK.dll, or its depended DLL, is not found." + newLine + "Please download DTXMania again."
 					) ) bDllNotFound = true;
-				if (!tDLLの存在チェック(CDTXMania.D3DXDLL,
-					CDTXMania.D3DXDLL + " が存在しません。" + newLine + "DirectX Redist フォルダの DXSETUP.exe を実行し、" + newLine + "必要な DirectX ランタイムをインストールしてください。",
-					CDTXMania.D3DXDLL + " is not found." + newLine + "Please execute DXSETUP.exe in \"DirectX Redist\" folder, to install DirectX runtimes required for DTXMania.",
-					true
-					)) bDllNotFound = true;
+				// D3DX DLL check removed — D3D11 does not require D3DX runtime
 				if ( !tDLLの存在チェック("dll\\bass.dll",
 					"bass.dll が存在しません。" + newLine + "DTXManiaをダウンロードしなおしてください。",
 					"baas.dll is not found." + newLine + "Please download DTXMania again."

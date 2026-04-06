@@ -21,13 +21,29 @@
     <Compile Remove="Code\00.Common\CCpuCores.cs" />
   </ItemGroup>
 
+  <!-- D3D9-only files excluded during D3D11 migration -->
+  <ItemGroup>
+    <Compile Remove="Code\01.Framework\Enumeration\Enumeration9.cs" />
+    <Compile Remove="Code\01.Framework\DeviceSettings\Direct3D9Settings.cs" />
+    <Compile Remove="Code\01.Framework\DeviceSettings\ConversionMethods.cs" />
+    <Compile Remove="Code\01.Framework\Rendering\VertexElementAttribute.cs" />
+    <Compile Remove="Code\01.Framework\Utilities\TransformedColoredTexturedVertex.cs" />
+    <Compile Remove="Code\01.Framework\Utilities\TransformedColoredVertex.cs" />
+    <Compile Remove="Code\04.Graphics\VertexFormat\ColoredVertex.cs" />
+    <Compile Remove="Code\04.Graphics\VertexFormat\PositionColoredTexturedVertex.cs" />
+    <Compile Remove="Code\04.Graphics\VertexFormat\TexturedVertex.cs" />
+    <Compile Remove="Code\04.Graphics\VertexFormat\TransformedColoredTexturedVertex.cs" />
+    <Compile Remove="Code\04.Graphics\VertexFormat\TransformedColoredVertex.cs" />
+  </ItemGroup>
+
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DefineConstants>TRACE;TEST_ENGLISH_ TEST_Direct3D9Ex_</DefineConstants>
     <Optimize>true</Optimize>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Vortice.Direct3D9" Version="3.8.3" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageReference Include="Vortice.D3DCompiler" Version="3.8.3" />
     <PackageReference Include="Vortice.DirectInput" Version="3.8.3" />
     <PackageReference Include="Vortice.DirectSound" Version="3.8.3" />
     <PackageReference Include="Vortice.DXGI" Version="3.8.3" />

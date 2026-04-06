@@ -4,10 +4,8 @@ using System.Text;
 using System.Drawing;
 using System.IO;
 using System.Diagnostics;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
-using Vortice.Direct3D9;
 using FDK;
 
 using Rectangle = System.Drawing.Rectangle;
@@ -66,8 +64,7 @@ namespace DTXMania
 				this.txパネル本体 = CDTXMania.tGenerateTexture( CSkin.Path( @"Graphics\5_preimage panel.png" ), false );
 				this.txプレビュー画像 = null;
 				this.txプレビュー画像がないときの画像 = CDTXMania.tGenerateTexture( CSkin.Path( @"Graphics\5_preimage default.png" ), false );
-                this.sfAVI画像 = CDTXMania.app.Device.CreateOffscreenPlainSurface( 0xcc, 0x10d, CDTXMania.app.GraphicsDeviceManager.CurrentSettings.BackBufferFormat, Pool.SystemMemory );
-				this.nAVI再生開始時刻 = -1L;
+                this.nAVI再生開始時刻 = -1L;
 				this.n前回描画したフレーム番号 = -1;
 				this.b動画フレームを作成した = false;
 				this.pAVIBmp = IntPtr.Zero;
@@ -83,12 +80,7 @@ namespace DTXMania
 				CDTXMania.tReleaseTexture( ref this.txプレビュー画像 );
 				CDTXMania.tReleaseTexture( ref this.txプレビュー画像がないときの画像 );
                 CDTXMania.tReleaseTexture( ref this.r表示するプレビュー画像 );
-                if ( this.sfAVI画像 != null )
-				{
-					this.sfAVI画像.Dispose();
-					this.sfAVI画像 = null;
-				}
-				base.OnManagedReleaseResources();
+                base.OnManagedReleaseResources();
 			}
 		}
 		public override int OnUpdateAndDraw()
@@ -162,7 +154,6 @@ namespace DTXMania
 		private int n本体X;
 		private int n本体Y;
 		private IntPtr pAVIBmp;
-		private Surface sfAVI画像;
 		private string str現在のファイル名;
 		private CTexture txパネル本体;
 		private CTexture txプレビュー画像;
@@ -182,41 +173,6 @@ namespace DTXMania
 			}
 		}
 
-		private unsafe void tサーフェイスをクリアする( Surface sf )
-		{
-			LockedRectangle rectangle = sf.LockRect( LockFlags.None );
-			IntPtr dataPointer = rectangle.DataPointer;
-			int sfWidth = (int)sf.Description.Width;
-			int sfHeight = (int)sf.Description.Height;
-			switch( ( rectangle.Pitch / sfWidth ) )
-			{
-				case 4:
-					{
-						uint* numPtr = (uint*) dataPointer.ToPointer();
-						for( int i = 0; i < sfHeight; i++ )
-						{
-							for( int j = 0; j < sfWidth; j++ )
-							{
-								( numPtr + ( i * sfWidth ) )[ j ] = 0;
-							}
-						}
-						break;
-					}
-				case 2:
-					{
-						ushort* numPtr2 = (ushort*) dataPointer.ToPointer();
-						for( int k = 0; k < sfHeight; k++ )
-						{
-							for( int m = 0; m < sfWidth; m++ )
-							{
-								( numPtr2 + ( k * sfWidth ) )[ m ] = 0;
-							}
-						}
-						break;
-					}
-			}
-			sf.UnlockRect();
-		}
 		private void tプレビュー画像_動画の変更()
 		{
 			if( this.rAVI != null )
@@ -303,7 +259,6 @@ namespace DTXMania
 					this.nAVI再生開始時刻 = CDTXMania.Timer.nCurrentTime;
 					this.n前回描画したフレーム番号 = -1;
 					this.b動画フレームを作成した = false;
-					this.tサーフェイスをクリアする( this.sfAVI画像 );
 					Trace.TraceInformation( "動画を生成しました。({0})", new object[] { filename } );
 				}
 				catch
@@ -353,7 +308,7 @@ namespace DTXMania
 					graphics = Graphics.FromImage( bitmap3 );
 					graphics.DrawImage( bitmap2, 5, 5, new Rectangle( 0x157, 0x6d, 204, 269 ), GraphicsUnit.Pixel );
 					graphics.Dispose();
-					this.txプレビュー画像 = new CTexture( CDTXMania.app.Device, bitmap3, CDTXMania.TextureFormat );
+					this.txプレビュー画像 = new CTexture( CDTXMania.app.Device, bitmap3, false );
 					this.r表示するプレビュー画像 = this.txプレビュー画像;
 				}
 				catch
@@ -498,38 +453,7 @@ namespace DTXMania
                 int z = n表示ジャケットサイズ;
 				float num3 = ( (float) this.ct遅延表示.nCurrentValue ) / 100f;
 				float num4 = 0.9f + ( 0.1f * num3 );
-				if( ( this.nAVI再生開始時刻 != -1 ) && ( this.sfAVI画像 != null ) )
-				{
-					if( this.b動画フレームを作成した && ( this.pAVIBmp != IntPtr.Zero ) )
-					{
-						LockedRectangle rectangle = this.sfAVI画像.LockRect( LockFlags.None );
-						IntPtr dataPointer = rectangle.DataPointer;
-						int num5 = rectangle.Pitch / (int)this.sfAVI画像.Description.Width;
-						BitmapUtil.BITMAPINFOHEADER* pBITMAPINFOHEADER = (BitmapUtil.BITMAPINFOHEADER*) this.pAVIBmp.ToPointer();
-						if( pBITMAPINFOHEADER->biBitCount == 0x18 )
-						{
-							//switch( num5 )
-							//{
-							//	case 2:
-							//		this.rAVI.tBitmap24ToGraphicsStreamR5G6B5( pBITMAPINFOHEADER, dataPointer, this.sfAVI画像.Description.Width, this.sfAVI画像.Description.Height );
-							//		break;
-
-							//	case 4:
-							//		this.rAVI.tBitmap24ToGraphicsStreamX8R8G8B8( pBITMAPINFOHEADER, dataPointer, this.sfAVI画像.Description.Width, this.sfAVI画像.Description.Height );
-							//		break;
-							//}
-						}
-						this.sfAVI画像.UnlockRect();
-						this.b動画フレームを作成した = false;
-					}
-                    x += (z - (int)this.sfAVI画像.Description.Width) / 2;
-                    y += (z - (int)this.sfAVI画像.Description.Height) / 2;
-                    using (Surface surface = CDTXMania.app.Device.GetBackBuffer(0, 0))
-                    {
-						CDTXMania.app.Device.UpdateSurface( this.sfAVI画像, new Rectangle( 0, 0, (int)this.sfAVI画像.Description.Width, (int)this.sfAVI画像.Description.Height ), surface, new Vortice.Mathematics.Int2( x, y ) );
-						return;
-					}
-				}
+				// TODO: D3D11 - AVI preview surface blit not yet implemented
                 if (this.r表示するプレビュー画像 != null)
                 {
                     float width = this.r表示するプレビュー画像.szImageSize.Width;

@@ -8,7 +8,6 @@ using System.Drawing;
 using System.Threading;
 using System.Globalization;
 using System.Runtime.Serialization.Formatters.Binary;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using FDK;
@@ -108,7 +107,7 @@ namespace DTXMania
                     graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAlias;
                     graphics.DrawString(strMessage[ci], ftMessage, Brushes.White, (float)0f, (float)0f);
                     graphics.Dispose();
-                    this.txMessage = new CTexture(CDTXMania.app.Device, image, CDTXMania.TextureFormat);
+                    this.txMessage = new CTexture( CDTXMania.app.Device, image, false );
                     this.txMessage.vcScaleRatio = new Vector3(0.5f, 0.5f, 1f);
                     image.Dispose();
                     CDTXMania.t安全にDisposeする(ref ftMessage);

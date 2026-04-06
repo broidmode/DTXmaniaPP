@@ -6,7 +6,6 @@ using System.Runtime.InteropServices;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using Vortice.DirectSound;

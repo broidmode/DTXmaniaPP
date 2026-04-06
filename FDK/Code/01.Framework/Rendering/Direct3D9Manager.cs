@@ -20,205 +20,126 @@
 * THE SOFTWARE.
 */
 using System;
-using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Security.Permissions;
-using Vortice.Direct3D9;
-using Vortice.Mathematics;
-using System.Numerics;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
 using FDK;
 
 namespace SampleFramework
 {
     /// <summary>
-    /// Manages aspects of the graphics device unique to Direct3D9.
+    /// Manages the D3D11 device, context, swap chain, and sprite renderer.
+    /// Class name kept as Direct3D9Manager to minimize changes in referencing code.
     /// </summary>
-    public class Direct3D9Manager
+    public class Direct3D9Manager : IDisposable
     {
         GraphicsDeviceManager manager;
 
         /// <summary>
-        /// Gets the graphics device.
+        /// The D3D11 device (used for resource creation).
         /// </summary>
-        /// <value>The graphics device.</value>
-#if TEST_Direct3D9Ex
-		public DeviceEx Device							//yyagi
-#else
-        public Device Device
-#endif
-        {
-            get;
-            internal set;
-        }
+        public Device Device { get; internal set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Direct3D9Manager"/> class.
+        /// The immediate device context (used for draw commands).
         /// </summary>
-        /// <param name="manager">The parent manager.</param>
+        public ID3D11DeviceContext Context { get; internal set; }
+
+        /// <summary>
+        /// The DXGI swap chain.
+        /// </summary>
+        public IDXGISwapChain1 SwapChain { get; internal set; }
+
+        /// <summary>
+        /// Render target view for the back buffer.
+        /// </summary>
+        public ID3D11RenderTargetView RenderTargetView { get; internal set; }
+
+        /// <summary>
+        /// The sprite batch renderer.
+        /// </summary>
+        public SpriteBatch SpriteBatch { get; internal set; }
+
         internal Direct3D9Manager(GraphicsDeviceManager manager)
         {
             this.manager = manager;
         }
 
         /// <summary>
-        /// Creates a vertex declaration using the specified vertex type.
+        /// Creates the render target view from the swap chain's back buffer.
+        /// Call after device/swap chain creation and after each resize.
         /// </summary>
-        /// <param name="vertexType">Type of the vertex.</param>
-        /// <returns>The vertex declaration for the specified vertex type.</returns>
-        [EnvironmentPermission(SecurityAction.LinkDemand)]
-        public VertexDeclaration CreateVertexDeclaration(Type vertexType)
+        internal void CreateRenderTargetView()
         {
-            // ensure that we have a value type
-            if (!vertexType.IsValueType)
-                throw new InvalidOperationException("Vertex types must be value types.");
-
-            // grab the list of elements in the vertex
-            List<VertexElementAttribute> objectAttributes = new List<VertexElementAttribute>();
-            FieldInfo[] fields = vertexType.GetFields(BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance);
-            foreach (FieldInfo field in fields)
-            {
-                // check for the custom attribute
-                VertexElementAttribute[] attributes = (VertexElementAttribute[])field.GetCustomAttributes(typeof(VertexElementAttribute), false);
-                if (field.Name.Contains("<") && field.Name.Contains(">"))
-                {
-                    // look up the property matching this field to see if it has the attribute
-                    int index1 = field.Name.IndexOf('<');
-                    int index2 = field.Name.IndexOf('>');
-
-                    // parse out the name
-                    string propertyName = field.Name.Substring(index1 + 1, index2 - index1 - 1);
-                    PropertyInfo property = vertexType.GetProperty(propertyName, field.FieldType);
-                    if (property != null)
-                        attributes = (VertexElementAttribute[])property.GetCustomAttributes(typeof(VertexElementAttribute), false);
-                }
-                if (attributes.Length == 1)
-                {
-                    // add the attribute to the list
-                    attributes[0].Offset = Marshal.OffsetOf(vertexType, field.Name).ToInt32();
-                    objectAttributes.Add(attributes[0]);
-                }
-            }
-
-            // make sure we have at least one element
-            if (objectAttributes.Count < 1)
-                throw new InvalidOperationException("The vertex type must have at least one field or property marked with the VertexElement attribute.");
-
-            // loop through the attributes and start building vertex elements
-            List<VertexElement> elements = new List<VertexElement>();
-            Dictionary<DeclarationUsage, int> usages = new Dictionary<DeclarationUsage, int>();
-            foreach (VertexElementAttribute attribute in objectAttributes)
-            {
-                // check the current usage index
-                if (!usages.ContainsKey(attribute.Usage))
-                    usages.Add(attribute.Usage, 0);
-
-                // advance the current usage count
-                int index = usages[attribute.Usage];
-                usages[attribute.Usage]++;
-
-                // create the element
-                elements.Add(new VertexElement((short)attribute.Stream, (short)attribute.Offset, attribute.Type,
-                    attribute.Method, attribute.Usage, (byte)index));
-            }
-
-            elements.Add(VertexElement.VertexDeclarationEnd);
-            return Device.CreateVertexDeclaration(elements.ToArray());
+            RenderTargetView?.Dispose();
+            using var backBuffer = SwapChain.GetBuffer<ID3D11Texture2D>(0);
+            RenderTargetView = Device.CreateRenderTargetView(backBuffer);
+            Context.OMSetRenderTargets(RenderTargetView);
         }
 
         /// <summary>
-        /// Creates a render target surface that is compatible with the current device settings.
+        /// Sets the viewport to match the given dimensions.
         /// </summary>
-        /// <param name="width">The width of the surface.</param>
-        /// <param name="height">The height of the surface.</param>
-        /// <returns>The newly created render target surface.</returns>
-        public Texture CreateRenderTarget(int width, int height)
+        internal void SetViewport(int width, int height)
         {
-            return Device.CreateTexture((uint)width, (uint)height, 1, Usage.RenderTarget, manager.CurrentSettings.BackBufferFormat, Pool.Default);
+            Context.RSSetViewport(0, 0, width, height);
         }
 
         /// <summary>
-        /// Creates a resolve target for capturing the back buffer.
+        /// Creates a render target texture.
         /// </summary>
-        /// <returns>The newly created resolve target.</returns>
-        public Texture CreateResolveTarget()
+        public ShaderResourceTexture CreateRenderTarget(int width, int height)
         {
-            return Device.CreateTexture((uint)manager.ScreenWidth, (uint)manager.ScreenHeight, 1, Usage.RenderTarget, manager.CurrentSettings.BackBufferFormat, Pool.Default);
-        }
-
-        /// <summary>
-        /// Resolves the current back buffer into a texture.
-        /// </summary>
-        /// <param name="target">The target texture.</param>
-        /// <exception cref="InvalidOperationException">Thrown when the resolve process fails.</exception>
-        public void ResolveBackBuffer(Texture target)
-        {
-            ResolveBackBuffer(target, 0);
-        }
-
-        /// <summary>
-        /// Resolves the current back buffer into a texture.
-        /// </summary>
-        /// <param name="target">The target texture.</param>
-        /// <param name="backBufferIndex">The index of the back buffer.</param>
-        /// <exception cref="InvalidOperationException">Thrown when the resolve process fails.</exception>
-        public void ResolveBackBuffer(Texture target, int backBufferIndex)
-        {
-            // disable exceptions for this method
-            //bool storedThrow = Configuration.ThrowOnError;
-            //Configuration.ThrowOnError = false;
-            Surface destination = null;
-
-            try
+            var desc = new Texture2DDescription
             {
-                // grab the current back buffer
-                Surface backBuffer = Device.GetBackBuffer(0u, (uint)backBufferIndex, BackBufferType.Mono);
-                if (backBuffer == null || new Result(Marshal.GetHRForLastWin32Error()).Failure)
-                    throw new InvalidOperationException("Could not obtain back buffer surface.");
+                Width = (uint)width,
+                Height = (uint)height,
+                MipLevels = 1,
+                ArraySize = 1,
+                Format = Format.B8G8R8A8_UNorm,
+                SampleDescription = new SampleDescription(1, 0),
+                Usage = ResourceUsage.Default,
+                BindFlags = BindFlags.RenderTarget | BindFlags.ShaderResource,
+            };
+            var tex = Device.CreateTexture2D(desc);
+            var srv = Device.CreateShaderResourceView(tex);
+            return new ShaderResourceTexture { Texture2D = tex, SRV = srv };
+        }
 
-                // grab the destination surface
-                destination = target.GetSurfaceLevel(0);
-                if (destination == null || new Result(Marshal.GetHRForLastWin32Error()).Failure)
-                    throw new InvalidOperationException("Could not obtain resolve target surface.");
-
-                // first try to copy using linear filtering
-                Device.StretchRectFull(backBuffer, destination, TextureFilter.Linear);
-                if (new Result(Marshal.GetHRForLastWin32Error()).Failure)
-                {
-                    // that failed, so try with no filtering
-                    Device.StretchRectFull(backBuffer, destination, TextureFilter.None);
-                    if (new Result(Marshal.GetHRForLastWin32Error()).Failure)
-                    {
-                        // that failed as well, so the last thing we can try is a load surface call
-                        Device.StretchRectFull(backBuffer, destination, TextureFilter.None);
-                        if (new Result(Marshal.GetHRForLastWin32Error()).Failure)
-                            throw new InvalidOperationException("Could not copy surfaces.");
-                    }
-                }
-            }
-            finally
+        /// <summary>
+        /// Copies the back buffer into a texture (for screenshots or render-to-texture).
+        /// </summary>
+        public void ResolveBackBuffer(ShaderResourceTexture target, int backBufferIndex = 0)
+        {
+            using var backBuffer = SwapChain.GetBuffer<ID3D11Texture2D>((uint)backBufferIndex);
+            if (target.Texture2D != null)
             {
-                if (destination != null)
-                    destination.Dispose();
-                //Configuration.ThrowOnError = storedThrow;
+                Context.CopyResource(target.Texture2D, backBuffer);
             }
         }
 
         /// <summary>
-        /// Resets the render target.
+        /// Returns the back buffer texture directly (caller must dispose).
+        /// </summary>
+        public ID3D11Texture2D ResolveBackBuffer()
+        {
+            return SwapChain.GetBuffer<ID3D11Texture2D>(0);
+        }
+
+        /// <summary>
+        /// Resets the render target to the default back buffer.
         /// </summary>
         public void ResetRenderTarget()
         {
-            Surface backBuffer = Device.GetBackBuffer(0u, 0u, BackBufferType.Mono);
+            Context.OMSetRenderTargets(RenderTargetView);
+        }
 
-            try
-            {
-                Device.SetRenderTarget(0, backBuffer);
-            }
-            finally
-            {
-                backBuffer.Dispose();
-            }
+        public void Dispose()
+        {
+            SpriteBatch?.Dispose();
+            RenderTargetView?.Dispose();
+            SwapChain?.Dispose();
+            Context?.Dispose();
+            Device?.Dispose();
         }
     }
 }

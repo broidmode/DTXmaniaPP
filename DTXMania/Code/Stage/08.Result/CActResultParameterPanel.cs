@@ -4,7 +4,6 @@ using System.Text;
 using System.Runtime.InteropServices;
 using System.Drawing;
 using System.IO;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using FDK;
@@ -448,7 +447,7 @@ namespace DTXMania
                     #endregion
                     CDTXMania.t安全にDisposeする( ref bmpCardName );
                     CDTXMania.t安全にDisposeする( ref bmpTitleName );
-                    this.txネームプレート用文字[ i ] = new CTexture( CDTXMania.app.Device, image2, CDTXMania.TextureFormat, false );
+                    this.txネームプレート用文字[ i ] = new CTexture( CDTXMania.app.Device, image2, false );
                     CDTXMania.t安全にDisposeする( ref image2 );
 
                     CDTXMania.t安全にDisposeする( ref graネームプレート用 );

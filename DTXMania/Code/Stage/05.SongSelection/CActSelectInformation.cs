@@ -38,7 +38,7 @@ namespace DTXMania
 			{
 				string[] infofiles = {		// #25381 2011.6.4 yyagi
 				   @"Graphics\5_information.png" ,
-				   @"Graphics\5_informatione.png"
+				   @"Graphics\5_information.png"
 				};
 				int c = ( CultureInfo.CurrentCulture.TwoLetterISOLanguageName == "ja" ) ? 0 : 1; 
 				this.txInfo = CDTXMania.tGenerateTexture( CSkin.Path( infofiles[ c ] ), false );

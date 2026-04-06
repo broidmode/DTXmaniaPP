@@ -135,14 +135,25 @@
           }
         }
       },
-      "Vortice.Direct3D9/3.8.3": {
+      "Vortice.D3DCompiler/3.8.3": {
         "dependencies": {
           "SharpGen.Runtime": "2.4.2-beta",
-          "SharpGen.Runtime.COM": "2.4.2-beta",
-          "Vortice.Mathematics": "2.1.0"
+          "Vortice.DirectX": "3.8.3"
         },
         "runtime": {
-          "lib/net8.0/Vortice.Direct3D9.dll": {
+          "lib/net8.0/Vortice.D3DCompiler.dll": {
+            "assemblyVersion": "3.8.3.0",
+            "fileVersion": "3.8.3.0"
+          }
+        }
+      },
+      "Vortice.Direct3D11/3.8.3": {
+        "dependencies": {
+          "SharpGen.Runtime": "2.4.2-beta",
+          "Vortice.DXGI": "3.8.3"
+        },
+        "runtime": {
+          "lib/net8.0/Vortice.Direct3D11.dll": {
             "assemblyVersion": "3.8.3.0",
             "fileVersion": "3.8.3.0"
           }
@@ -208,8 +219,9 @@
       "FDK/1.0.0": {
         "dependencies": {
           "System.Management": "8.0.0",
+          "Vortice.D3DCompiler": "3.8.3",
           "Vortice.DXGI": "3.8.3",
-          "Vortice.Direct3D9": "3.8.3",
+          "Vortice.Direct3D11": "3.8.3",
           "Vortice.DirectInput": "3.8.3",
           "Vortice.DirectSound": "3.8.3",
           "libbjxa": "1.0.0"
@@ -335,12 +347,19 @@
       "path": "system.text.json/9.0.1",
       "hashPath": "system.text.json.9.0.1.nupkg.sha512"
     },
-    "Vortice.Direct3D9/3.8.3": {
+    "Vortice.D3DCompiler/3.8.3": {
       "type": "package",
       "serviceable": true,
-      "sha512": "sha512-QiSL2YqOaeJl4BW1H6WZUY8udoXhsCvVxnxuF4EnPiJcl4mQm6NdrJxvauue+MfcFxuiX/9dLCsbakvfCKOCNg==",
-      "path": "vortice.direct3d9/3.8.3",
-      "hashPath": "vortice.direct3d9.3.8.3.nupkg.sha512"
+      "sha512": "sha512-OmGPMhf/xnD8/HZ0ms1x7xSFyz+6e6mveCqhu0EioMFQYKJM35/ZVLLo+FIB5KpsrlqhM/jvYHYPAxu45YONGg==",
+      "path": "vortice.d3dcompiler/3.8.3",
+      "hashPath": "vortice.d3dcompiler.3.8.3.nupkg.sha512"
+    },
+    "Vortice.Direct3D11/3.8.3": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-JgFUswu2mgrSwcd0KRF2AnfeE5VbMEgcicmxPD1g2yXyomPIHbnX3wldBNHPOzzD0URC1WJ/pO1ymfi3imZwvg==",
+      "path": "vortice.direct3d11/3.8.3",
+      "hashPath": "vortice.direct3d11.3.8.3.nupkg.sha512"
     },
     "Vortice.DirectInput/3.8.3": {
       "type": "package",

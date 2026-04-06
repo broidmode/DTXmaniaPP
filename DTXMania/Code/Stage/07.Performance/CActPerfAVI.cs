@@ -5,10 +5,8 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Diagnostics;
 using System.IO;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
-using Vortice.Direct3D9;
 using DirectShowLib;
 using FDK;
 
@@ -82,7 +80,7 @@ namespace DTXMania
                         this.frameheight = (uint)this.rAVI.avi.nフレーム高さ;
                         if( this.tx描画用 == null )
                         {
-                            this.tx描画用 = new CTexture( CDTXMania.app.Device, (int)this.framewidth, (int)this.frameheight, CDTXMania.app.GraphicsDeviceManager.CurrentSettings.BackBufferFormat, Pool.Managed );
+                            this.tx描画用 = new CTexture( CDTXMania.app.Device, (int)this.framewidth, (int)this.frameheight, true );
                         }
 
                         if( fClipアスペクト比 < 1.77f )
@@ -183,7 +181,7 @@ namespace DTXMania
                         this.frameheight = this.rAVI.avi.nフレーム高さ;
                         if( this.tx描画用 == null )
                         {
-                            this.tx描画用 = new CTexture( CDTXMania.app.Device, (int)this.framewidth, (int)this.frameheight, CDTXMania.app.GraphicsDeviceManager.CurrentSettings.BackBufferFormat, Pool.Managed );
+                            this.tx描画用 = new CTexture( CDTXMania.app.Device, (int)this.framewidth, (int)this.frameheight, true );
                         }
                         if( fClipアスペクト比 < 1.77f )
                         {
@@ -380,7 +378,7 @@ namespace DTXMania
                 {
                     this.txクリップパネル = CDTXMania.tGenerateTexture(CSkin.Path(@"Graphics\7_ClipPanel.png"));
                 }
-                this.txDShow汎用 = new CTexture(CDTXMania.app.Device, 1280, 720, CDTXMania.app.GraphicsDeviceManager.CurrentSettings.BackBufferFormat, Pool.Managed);
+                this.txDShow汎用 = new CTexture( CDTXMania.app.Device, 1280, 720 );
 
                 for (int i = 0; i < 1; i++)
                 {

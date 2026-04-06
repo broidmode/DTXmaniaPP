@@ -5,10 +5,8 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.IO;
 using System.Drawing;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
-using Vortice.Direct3D9;
 using FDK;
 
 namespace DTXMania

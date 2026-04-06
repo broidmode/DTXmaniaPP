@@ -7,10 +7,10 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Threading;
 using System.Threading.Tasks;
-using Vortice.Direct3D9;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
 using Vortice.Mathematics;
 using System.Numerics;
-using Vortice.Direct3D9;
 using Vortice.Multimedia;
 using DirectShowLib;
 
@@ -500,14 +500,15 @@ namespace FDK
 			//-----------------
 			#endregion
 
-			LockedRectangle dr = texture.texture.LockRect( 0, LockFlags.Discard );
+			var context = texture.texture.Texture2D.Device.ImmediateContext;
+			var mapped = context.Map( texture.texture.Texture2D, 0, MapMode.WriteDiscard );
 			try
 			{
-				if( this.nスキャンライン幅byte == dr.Pitch )
+				if( this.nスキャンライン幅byte == mapped.RowPitch )
 				{
 					#region [ (A) ピッチが合うので、テクスチャに直接転送する。]
 					//-----------------
-					hr = this.memoryRenderer.GetCurrentBuffer( dr.DataPointer, this.nデータサイズbyte );
+					hr = this.memoryRenderer.GetCurrentBuffer( mapped.DataPointer, this.nデータサイズbyte );
 					DsError.ThrowExceptionForHR( hr );
 					//-----------------
 					#endregion
@@ -531,30 +532,17 @@ namespace FDK
 
 					#region [ テクスチャにスナップイメージを転送。]
 					//-----------------
+					// D3D11: All textures are B8G8R8A8_UNorm, equivalent to ARGB32
 					bool bARGB32 = true;
-
-					switch( texture.Format )
-					{
-						case Format.A8R8G8B8:
-							bARGB32 = true;
-							break;
-
-						case Format.X8R8G8B8:
-							bARGB32 = false;
-							break;
-
-						default:
-							return;		// 未対応のフォーマットは無視。
-					}
 
 					// スレッドプールを使って並列転送する準備。
 
 					this.ptrSnap = (byte*) this.ip.ToPointer();
-					var ptr = stackalloc UInt32*[ CDirectShow.n並列度 ];	// stackalloc（GC対象外、メソッド終了時に自動開放）は、スタック変数相手にしか使えない。
-					ptr[ 0 ] = (UInt32*) dr.DataPointer.ToPointer();	//		↓
-					for( int i = 1; i < CDirectShow.n並列度; i++ )			// スタック変数で確保、初期化して…
-						ptr[ i ] = ptr[ i - 1 ] + this.n幅px;				//		↓
-					this.ptrTexture = ptr;									// スタック変数をクラスメンバに渡す（これならOK）。
+					var ptr = stackalloc UInt32*[ CDirectShow.n並列度 ];
+					ptr[ 0 ] = (UInt32*) mapped.DataPointer.ToPointer();
+					for( int i = 1; i < CDirectShow.n並列度; i++ )
+						ptr[ i ] = ptr[ i - 1 ] + this.n幅px;
+					this.ptrTexture = ptr;
 
 
 					// 並列度が１ならシングルスレッド、２以上ならマルチスレッドで転送する。
@@ -597,7 +585,7 @@ namespace FDK
 			}
 			finally
 			{
-				texture.texture.UnlockRect( 0 );
+				context.Unmap( texture.texture.Texture2D, 0 );
 			}
 		}
 

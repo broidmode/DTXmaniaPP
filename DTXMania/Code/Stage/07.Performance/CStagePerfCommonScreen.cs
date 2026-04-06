@@ -4838,7 +4838,7 @@ namespace DTXMania
             }
             try
             {
-                this.tx背景 = new CTexture(CDTXMania.app.Device, image, CDTXMania.TextureFormat);
+                this.tx背景 = new CTexture( CDTXMania.app.Device, image, false );
             }
             catch (CTextureCreateFailedException)
             {

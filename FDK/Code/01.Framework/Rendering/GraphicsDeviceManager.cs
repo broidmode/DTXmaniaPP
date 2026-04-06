@@ -26,30 +26,23 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using Vortice.Direct3D9;
-using Vortice.Mathematics;
-using System.Numerics;
-using Vortice.DXGI;
 using System.Diagnostics;
-using SharpGen.Runtime;
+using Vortice.Direct3D;
+using Vortice.Direct3D11;
+using Vortice.DXGI;
+using FDK;
 
 using Rectangle = System.Drawing.Rectangle;
 
 namespace SampleFramework
 {
 	/// <summary>
-	/// Handles the configuration and management of the graphics device.
+	/// Handles the configuration and management of the D3D11 graphics device.
 	/// </summary>
 	public class GraphicsDeviceManager : IDisposable
 	{
-		// D3DERR_DEVICELOST (0x88760868) — not exposed as a constant in Vortice
-		private static readonly Result DeviceLostResult = new Result(unchecked((int)0x88760868));
-
 		Game game;
 		bool ignoreSizeChanges;
-		bool deviceLost;
-		//        bool doNotStoreBufferSize;
-		//        bool renderingOccluded;
 
 		int fullscreenWindowWidth;
 		int fullscreenWindowHeight;
@@ -58,16 +51,6 @@ namespace SampleFramework
 		WINDOWPLACEMENT windowedPlacement;
 		long windowedStyle;
 		bool savedTopmost;
-
-#if TEST_Direct3D9Ex
-		internal static Direct3DEx Direct3D9Object			// yyagi
-#else
-		internal static Direct3D Direct3D9Object
-#endif
-		{
-			get;
-			private set;
-		}
 
 		public DeviceSettings CurrentSettings
 		{
@@ -133,15 +116,7 @@ namespace SampleFramework
 			if (settings == null)
 				throw new ArgumentNullException("settings");
 
-			Enumeration9.MinimumSettings = minimumSettings;
-
-			DeviceSettings validSettings = DeviceSettings.FindValidSettings(settings);
-
-			var pp = validSettings.Direct3D9.PresentParameters;
-			pp.DeviceWindowHandle = game.Window.Handle;
-			validSettings.Direct3D9.PresentParameters = pp;
-
-			CreateDevice(validSettings);
+			CreateDevice(settings);
 		}
 		public void ChangeDevice(bool windowed, int desiredWidth, int desiredHeight)
 		{
@@ -176,10 +151,7 @@ namespace SampleFramework
 		}
 		public bool EnsureDevice()
 		{
-			if (Direct3D9.Device != null && !deviceLost)
-				return true;
-
-			return false;
+			return Direct3D9.Device != null;
 		}
 
 		protected virtual void Dispose(bool disposing)
@@ -190,7 +162,6 @@ namespace SampleFramework
 
 			if (disposing)
 				ReleaseDevice();
-
 		}
 		private bool bDisposed = false;
 
@@ -205,8 +176,7 @@ namespace SampleFramework
 			if (settings.BackBufferWidth == 0 && settings.BackBufferHeight == 0)
 				keepCurrentWindowSize = true;
 
-			// handle the window state in Direct3D9 (it will be handled for us in DXGI)
-			// check if we are going to windowed or fullscreen mode
+			// Handle window state for fullscreen toggle
 			if (settings.Windowed)
 			{
 				if (oldSettings != null && !oldSettings.Windowed)
@@ -226,7 +196,6 @@ namespace SampleFramework
 					NativeMethods.GetWindowPlacement(game.Window.Handle, ref windowedPlacement);
 				}
 
-				// hide the window until we are done messing with it
 				game.Window.Hide();
 				NativeMethods.SetWindowLong(game.Window.Handle, WindowConstants.GWL_STYLE, (uint)(WindowConstants.WS_POPUP | WindowConstants.WS_SYSMENU));
 
@@ -234,16 +203,15 @@ namespace SampleFramework
 				placement.length = WINDOWPLACEMENT.Length;
 				NativeMethods.GetWindowPlacement(game.Window.Handle, ref placement);
 
-				// check if we are in the middle of a restore
 				if ((placement.flags & WindowConstants.WPF_RESTORETOMAXIMIZED) != 0)
 				{
-					// update the flags to avoid sizing issues
 					placement.flags &= ~WindowConstants.WPF_RESTORETOMAXIMIZED;
 					placement.showCmd = WindowConstants.SW_RESTORE;
 					NativeMethods.SetWindowPlacement(game.Window.Handle, ref placement);
 				}
 			}
 
+			// Track previous window sizes for fullscreen toggle
 			if (settings.Windowed)
 			{
 				if (oldSettings != null && !oldSettings.Windowed)
@@ -261,32 +229,26 @@ namespace SampleFramework
 				}
 			}
 
-			// check if the device can be reset, or if we need to completely recreate it
-			Result result = Result.Ok;
-			bool canReset = CanDeviceBeReset(oldSettings, settings);
-			if (canReset)
-				result = ResetDevice();
-
-			if (result == DeviceLostResult)
-				deviceLost = true;
-			else if (!canReset || result.Failure)
+			// Create or resize the D3D11 device
+			if (Direct3D9.Device == null)
 			{
-				if (oldSettings != null)
-					ReleaseDevice();
-
 				InitializeDevice();
+			}
+			else
+			{
+				ResizeDevice();
 			}
 
 			UpdateDeviceInformation();
 
-			// check if we changed from fullscreen to windowed mode
+			// Restore window placement when switching from fullscreen to windowed
 			if (oldSettings != null && !oldSettings.Windowed && settings.Windowed)
 			{
 				NativeMethods.SetWindowPlacement(game.Window.Handle, ref windowedPlacement);
 				game.Window.TopMost = savedTopmost;
 			}
 
-			// check if we need to resize
+			// Resize window to match requested back buffer size
 			if (settings.Windowed && !keepCurrentWindowSize)
 			{
 				int width;
@@ -297,13 +259,10 @@ namespace SampleFramework
 					placement.length = WINDOWPLACEMENT.Length;
 					NativeMethods.GetWindowPlacement(game.Window.Handle, ref placement);
 
-					// check if we are being restored
 					if ((placement.flags & WindowConstants.WPF_RESTORETOMAXIMIZED) != 0 && placement.showCmd == WindowConstants.SW_SHOWMINIMIZED)
 					{
 						NativeMethods.ShowWindow(game.Window.Handle, WindowConstants.SW_RESTORE);
-
 						Rectangle rect = NativeMethods.GetClientRectangle(game.Window.Handle);
-
 						width = rect.Width;
 						height = rect.Height;
 						NativeMethods.ShowWindow(game.Window.Handle, WindowConstants.SW_MINIMIZE);
@@ -314,7 +273,6 @@ namespace SampleFramework
 						NativeMethods.AdjustWindowRect(ref frame, (uint)windowedStyle, false);
 						int frameWidth = frame.right - frame.left;
 						int frameHeight = frame.bottom - frame.top;
-
 						width = placement.rcNormalPosition.right - placement.rcNormalPosition.left - frameWidth;
 						height = placement.rcNormalPosition.bottom - placement.rcNormalPosition.top - frameHeight;
 					}
@@ -326,7 +284,6 @@ namespace SampleFramework
 					height = rect.Height;
 				}
 
-				// check if we have a different desired size
 				if (width != settings.BackBufferWidth ||
 					height != settings.BackBufferHeight)
 				{
@@ -348,31 +305,20 @@ namespace SampleFramework
 					int clientWidth = r.Width;
 					int clientHeight = r.Height;
 
-					// check if the size was modified by Windows
 					if (clientWidth != settings.BackBufferWidth ||
 						clientHeight != settings.BackBufferHeight)
 					{
 						DeviceSettings newSettings = CurrentSettings.Clone();
-						newSettings.BackBufferWidth = 0;
-						newSettings.BackBufferHeight = 0;
-						if (newSettings.Direct3D9 != null)
-						{
-							var pp = newSettings.Direct3D9.PresentParameters;
-							pp.BackBufferWidth = (uint)clientWidth;   // Use actual client size for native rendering
-							pp.BackBufferHeight = (uint)clientHeight;  //
-							newSettings.Direct3D9.PresentParameters = pp;
-						}
-
+						newSettings.BackBufferWidth = clientWidth;
+						newSettings.BackBufferHeight = clientHeight;
 						CreateDevice(newSettings);
 					}
 				}
 			}
 
-			// if the window is still hidden, make sure it is shown
 			if (!game.Window.Visible)
 				NativeMethods.ShowWindow(game.Window.Handle, WindowConstants.SW_SHOW);
 
-			// set the execution state of the thread
 			if (!IsWindowed)
 				NativeMethods.SetThreadExecutionState(WindowConstants.ES_DISPLAY_REQUIRED | WindowConstants.ES_CONTINUOUS);
 			else
@@ -386,57 +332,43 @@ namespace SampleFramework
 			if (ignoreSizeChanges || !EnsureDevice() || (!IsWindowed))
 				return;
 
-			DeviceSettings newSettings = CurrentSettings.Clone();
-
 			Rectangle rect = NativeMethods.GetClientRectangle(game.Window.Handle);
-			if (rect.Width != newSettings.BackBufferWidth || rect.Height != newSettings.BackBufferHeight)
+			if (rect.Width != CurrentSettings.BackBufferWidth || rect.Height != CurrentSettings.BackBufferHeight)
 			{
-				newSettings.BackBufferWidth = 0;
-				newSettings.BackBufferHeight = 0;
-				var pp = newSettings.Direct3D9.PresentParameters;
-				pp.BackBufferWidth = (uint)rect.Width;       // Use actual client size for native rendering
-				pp.BackBufferHeight = (uint)rect.Height;     //
-				newSettings.Direct3D9.PresentParameters = pp;
+				DeviceSettings newSettings = CurrentSettings.Clone();
+				newSettings.BackBufferWidth = rect.Width;
+				newSettings.BackBufferHeight = rect.Height;
 				CreateDevice(newSettings);
 			}
 		}
+
 		void Window_ScreenChanged(object sender, EventArgs e)
 		{
 			if (!EnsureDevice() || !CurrentSettings.Windowed || ignoreSizeChanges)
 				return;
 
-			IntPtr windowMonitor = NativeMethods.MonitorFromWindow(game.Window.Handle, WindowConstants.MONITOR_DEFAULTTOPRIMARY);
-
-			DeviceSettings newSettings = CurrentSettings.Clone();
-			int adapterOrdinal = GetAdapterOrdinal(windowMonitor);
-			if (adapterOrdinal == -1)
-				return;
-			newSettings.Direct3D9.AdapterOrdinal = adapterOrdinal;
-
-			newSettings.BackBufferWidth = 0;                                // #23510 2010.11.1 add yyagi to avoid to reset to 640x480 for the first time in XP.
-			newSettings.BackBufferHeight = 0;                               //
-			var pp = newSettings.Direct3D9.PresentParameters;
 			Rectangle screenRect = NativeMethods.GetClientRectangle(game.Window.Handle);
-			pp.BackBufferWidth = (uint)screenRect.Width;       // Use actual client size for native rendering
-			pp.BackBufferHeight = (uint)screenRect.Height;     //
-			newSettings.Direct3D9.PresentParameters = pp;
-
+			DeviceSettings newSettings = CurrentSettings.Clone();
+			newSettings.BackBufferWidth = screenRect.Width;
+			newSettings.BackBufferHeight = screenRect.Height;
 			CreateDevice(newSettings);
 		}
 
 		void game_FrameEnd(object sender, EventArgs e)
 		{
+			if (Direct3D9.SwapChain == null) return;
+
 			try
 			{
-				var result = Direct3D9.Device.Present();
-				if (result == DeviceLostResult)
-					deviceLost = true;
+				uint syncInterval = CurrentSettings.EnableVSync ? 1u : 0u;
+				Direct3D9.SwapChain.Present(syncInterval, PresentFlags.None);
 			}
-			catch           // #23842 2011.1.6 yyagi: catch D3D9Exception to avoid unexpected termination by changing VSyncWait in fullscreen.
+			catch (Exception ex)
 			{
-				deviceLost = true;
+				Trace.TraceError($"Present failed: {ex.Message}");
 			}
 		}
+
 		void game_FrameStart(object sender, CancelEventArgs e)
 		{
 			if (Direct3D9.Device == null)
@@ -445,124 +377,78 @@ namespace SampleFramework
 				return;
 			}
 
-			//if (!game.IsActive || deviceLost)		// #23568 2010.11.3 yyagi: separate conditions to support valiable sleep value when !IsActive.
-			if (deviceLost)
-				Thread.Sleep(50);
-			else if (!game.IsActive && !this.CurrentSettings.EnableVSync)  // #23568 2010.11.4 yyagi: Don't add sleep() while VSync is enabled.
+			if (!game.IsActive && !this.CurrentSettings.EnableVSync)
 				Thread.Sleep(this.game.InactiveSleepTime.Milliseconds);
-
-			if (deviceLost)
-			{
-				Result result;
-				try
-				{
-					Direct3D9.Device.TestCooperativeLevel();
-					result = Result.Ok;
-				}
-				catch (SharpGenException ex)
-				{
-					result = ex.ResultCode;
-				}
-				if (result == DeviceLostResult)
-				{
-					e.Cancel = true;
-					return;
-				}
-
-				// if we are windowed, check the adapter format to see if the user
-				// changed the desktop format, causing a lost device
-				if (IsWindowed)
-				{
-					DisplayMode displayMode = GraphicsDeviceManager.Direct3D9Object.GetAdapterDisplayMode((uint)CurrentSettings.Direct3D9.AdapterOrdinal);
-					if (CurrentSettings.Direct3D9.AdapterFormat != displayMode.Format)
-					{
-						DeviceSettings newSettings = CurrentSettings.Clone();
-						ChangeDevice(newSettings);
-						e.Cancel = true;
-						return;
-					}
-				}
-
-				result = ResetDevice();
-				if (result.Failure)
-				{
-					e.Cancel = true;
-					return;
-				}
-			}
-
-			deviceLost = false;
-		}
-
-		bool CanDeviceBeReset(DeviceSettings oldSettings, DeviceSettings newSettings)
-		{
-			if (oldSettings == null)
-				return false;
-
-			return Direct3D9.Device != null &&
-				oldSettings.Direct3D9.AdapterOrdinal == newSettings.Direct3D9.AdapterOrdinal &&
-				oldSettings.Direct3D9.DeviceType == newSettings.Direct3D9.DeviceType &&
-				oldSettings.Direct3D9.CreationFlags == newSettings.Direct3D9.CreationFlags;
 		}
 
 		void InitializeDevice()
 		{
 			try
 			{
-				EnsureD3D9();
+				int width = CurrentSettings.BackBufferWidth;
+				int height = CurrentSettings.BackBufferHeight;
+				if (width <= 0) width = 1280;
+				if (height <= 0) height = 720;
 
-#if TEST_Direct3D9Ex
-				// 2011.4.26 yyagi
-				// Direct3D9.DeviceExを呼ぶ際(IDirect3D9Ex::CreateDeviceExを呼ぶ際)、
-				// フルスクリーンモードで初期化する場合はDisplayModeEx(D3DDISPLAYMODEEX *pFullscreenDisplayMode)に
-				// 適切な値を設定する必要あり。
-				// 一方、ウインドウモードで初期化する場合は、D3DDISPLAYMODEEXをNULLにする必要があるが、
-				// DisplayModeExがNULL不可と定義されているため、DeviceExのoverloadの中でDisplayModeExを引数に取らないものを
-				// 使う。(DeviceEx側でD3DDISPLAYMODEEXをNULLにしてくれる)
-				// 結局、DeviceExの呼び出しの際に、フルスクリーンかどうかで場合分けが必要となる。
-				if ( CurrentSettings.Direct3D9.PresentParameters.Windowed == false )
-				{
-					DisplayModeEx fullScreenDisplayMode = new DisplayModeEx();
-					fullScreenDisplayMode.Width = CurrentSettings.Direct3D9.PresentParameters.BackBufferWidth;
-					fullScreenDisplayMode.Height = CurrentSettings.Direct3D9.PresentParameters.BackBufferHeight;
-					fullScreenDisplayMode.RefreshRate = CurrentSettings.Direct3D9.PresentParameters.FullScreenRefreshRateInHertz;
-					fullScreenDisplayMode.Format = CurrentSettings.Direct3D9.PresentParameters.BackBufferFormat;
+				// Create D3D11 device
+				var featureLevels = new[] { FeatureLevel.Level_11_0, FeatureLevel.Level_10_1, FeatureLevel.Level_10_0 };
+				DeviceCreationFlags flags = DeviceCreationFlags.BgraSupport;
+#if DEBUG
+				// Enable debug layer in debug builds if available
+				if (D3D11.SdkLayersAvailable())
+					flags |= DeviceCreationFlags.Debug;
+#endif
+				D3D11.D3D11CreateDevice(
+					null,
+					DriverType.Hardware,
+					flags,
+					featureLevels,
+					out var device,
+					out var featureLevel,
+					out var context);
 
-					Direct3D9.Device = new SlimDX.Direct3D9.DeviceEx( Direct3D9Object, CurrentSettings.Direct3D9.AdapterOrdinal,
-						CurrentSettings.Direct3D9.DeviceType, game.Window.Handle,
-						CurrentSettings.Direct3D9.CreationFlags, CurrentSettings.Direct3D9.PresentParameters, fullScreenDisplayMode );
-				}
-				else
+				Direct3D9.Device = device;
+				Direct3D9.Context = context;
+
+				Trace.TraceInformation($"D3D11 device created. Feature level: {featureLevel}");
+
+				// Create DXGI swap chain
+				using var dxgiDevice = device.QueryInterface<IDXGIDevice1>();
+				using var dxgiAdapter = dxgiDevice.GetAdapter();
+				using var dxgiFactory = dxgiAdapter.GetParent<IDXGIFactory2>();
+
+				var swapChainDesc = new SwapChainDescription1
 				{
-					Direct3D9.Device = new SlimDX.Direct3D9.DeviceEx( Direct3D9Object, CurrentSettings.Direct3D9.AdapterOrdinal,
-						CurrentSettings.Direct3D9.DeviceType, game.Window.Handle,
-						CurrentSettings.Direct3D9.CreationFlags, CurrentSettings.Direct3D9.PresentParameters );
-				}
-				Direct3D9.Device.MaximumFrameLatency = 1;
-#else
-				var createPP = CurrentSettings.Direct3D9.PresentParameters;
-				Direct3D9.Device = Direct3D9Object.CreateDevice(
-					(uint)CurrentSettings.Direct3D9.AdapterOrdinal,
-					CurrentSettings.Direct3D9.DeviceType,
-					game.Window.Handle,
-					CurrentSettings.Direct3D9.CreationFlags,
-					createPP);
-#endif
-#if TEST_Direct3D9Ex
-				Direct3D9.Device.MaximumFrameLatency = 1;			// yyagi
-#endif
-			}
-			catch (SharpGenException ex) when (ex.ResultCode == DeviceLostResult)
-			{
-				deviceLost = true;
-				return;
+					Width = (uint)width,
+					Height = (uint)height,
+					Format = Format.B8G8R8A8_UNorm,
+					SampleDescription = new SampleDescription(1, 0),
+					BufferUsage = Usage.RenderTargetOutput,
+					BufferCount = 2,
+					SwapEffect = SwapEffect.FlipDiscard,
+					Scaling = Scaling.Stretch,
+				};
+
+				Direct3D9.SwapChain = dxgiFactory.CreateSwapChainForHwnd(
+					device, game.Window.Handle, swapChainDesc);
+
+				// Disable Alt+Enter fullscreen toggle (we handle it ourselves)
+				dxgiFactory.MakeWindowAssociation(game.Window.Handle, WindowAssociationFlags.IgnoreAltEnter);
+
+				// Create render target view and set viewport
+				Direct3D9.CreateRenderTargetView();
+				Direct3D9.SetViewport(width, height);
+
+				// Create sprite batch
+				Direct3D9.SpriteBatch = new SpriteBatch(device, context);
+
+				CurrentSettings.BackBufferWidth = width;
+				CurrentSettings.BackBufferHeight = height;
 			}
 			catch (Exception e)
 			{
-				throw new DeviceCreationException("Could not create graphics device.", e);
+				throw new DeviceCreationException("Could not create D3D11 graphics device.", e);
 			}
-
-			PropogateSettings();
 
 			UpdateDeviceStats();
 
@@ -570,41 +456,41 @@ namespace SampleFramework
 			game.LoadContent();
 		}
 
-		Result ResetDevice()
+		void ResizeDevice()
 		{
+			if (Direct3D9.SwapChain == null)
+			{
+				InitializeDevice();
+				return;
+			}
+
+			int width = CurrentSettings.BackBufferWidth;
+			int height = CurrentSettings.BackBufferHeight;
+			if (width <= 0) width = 1280;
+			if (height <= 0) height = 720;
+
 			game.UnloadContent();
 
-			Result result;
-			try
-			{
-				var pp = CurrentSettings.Direct3D9.PresentParameters;
-				Direct3D9.Device.Reset(ref pp);
-				result = Result.Ok;
-			}
-			catch (SharpGenException ex)
-			{
-				result = ex.ResultCode;
-			}
+			// Release the old render target view before resizing
+			Direct3D9.RenderTargetView?.Dispose();
+			Direct3D9.RenderTargetView = null;
 
-			if (result == DeviceLostResult)
-				return result;
+			// Resize the swap chain buffers
+			Direct3D9.SwapChain.ResizeBuffers(
+				0, (uint)width, (uint)height, Format.Unknown, SwapChainFlags.None);
 
-			if (result.Failure)
-				return result;
+			// Recreate render target view and set viewport
+			Direct3D9.CreateRenderTargetView();
+			Direct3D9.SetViewport(width, height);
 
-			PropogateSettings();
+			CurrentSettings.BackBufferWidth = width;
+			CurrentSettings.BackBufferHeight = height;
+
 			UpdateDeviceStats();
 			game.LoadContent();
-
-			return result;
 		}
 
 		void ReleaseDevice()
-		{
-			ReleaseDevice9();
-		}
-
-		void ReleaseDevice9()
 		{
 			if (Direct3D9.Device == null)
 				return;
@@ -615,129 +501,26 @@ namespace SampleFramework
 				game.Dispose(true);
 			}
 
-			try
-			{
-				Direct3D9.Device.Dispose();
-			}
-			catch (ObjectDisposedException)
-			{
-				// 時々発生するのでキャッチしておく。
-			}
-			Direct3D9Object.Dispose();
-
-			Direct3D9Object = null;
+			Direct3D9.Dispose();
 			Direct3D9.Device = null;
-		}
-		void PropogateSettings()
-		{
-			CurrentSettings.BackBufferCount = (int)CurrentSettings.Direct3D9.PresentParameters.BackBufferCount;
-			CurrentSettings.BackBufferWidth = (int)CurrentSettings.Direct3D9.PresentParameters.BackBufferWidth;
-			CurrentSettings.BackBufferHeight = (int)CurrentSettings.Direct3D9.PresentParameters.BackBufferHeight;
-			CurrentSettings.BackBufferFormat = CurrentSettings.Direct3D9.PresentParameters.BackBufferFormat;
-			CurrentSettings.DepthStencilFormat = CurrentSettings.Direct3D9.PresentParameters.AutoDepthStencilFormat;
-			CurrentSettings.DeviceType = CurrentSettings.Direct3D9.DeviceType;
-			CurrentSettings.MultisampleQuality = (int)CurrentSettings.Direct3D9.PresentParameters.MultiSampleQuality;
-			CurrentSettings.MultisampleType = CurrentSettings.Direct3D9.PresentParameters.MultiSampleType;
-			CurrentSettings.RefreshRate = (int)CurrentSettings.Direct3D9.PresentParameters.FullScreenRefreshRateInHz;
-			CurrentSettings.Windowed = CurrentSettings.Direct3D9.PresentParameters.Windowed;
+			Direct3D9.Context = null;
+			Direct3D9.SwapChain = null;
 		}
 
 		void UpdateDeviceInformation()
 		{
-			StringBuilder builder = new StringBuilder();
-
-			if (CurrentSettings.Direct3D9.DeviceType == DeviceType.Hardware)
-				builder.Append("HAL");
-			else if (CurrentSettings.Direct3D9.DeviceType == DeviceType.Reference)
-				builder.Append("REF");
-			else if (CurrentSettings.Direct3D9.DeviceType == DeviceType.Software)
-				builder.Append("SW");
-
-			if ((CurrentSettings.Direct3D9.CreationFlags & CreateFlags.HardwareVertexProcessing) != 0)
-				if (CurrentSettings.Direct3D9.DeviceType == DeviceType.Hardware)
-					builder.Append(" (hw vp)");
-				else
-					builder.Append(" (simulated hw vp)");
-			else if ((CurrentSettings.Direct3D9.CreationFlags & CreateFlags.MixedVertexProcessing) != 0)
-				if (CurrentSettings.Direct3D9.DeviceType == DeviceType.Hardware)
-					builder.Append(" (mixed vp)");
-				else
-					builder.Append(" (simulated mixed vp)");
-			else
-				builder.Append(" (sw vp)");
-
-			if (CurrentSettings.Direct3D9.DeviceType == DeviceType.Hardware)
-			{
-				// loop through each adapter until we find the right one
-				foreach (AdapterInfo9 adapterInfo in Enumeration9.Adapters)
-				{
-					if (adapterInfo.AdapterOrdinal == CurrentSettings.Direct3D9.AdapterOrdinal)
-					{
-						builder.AppendFormat(": {0}", adapterInfo.Description);
-						break;
-					}
-				}
-			}
-
-			DeviceInformation = builder.ToString();
+			DeviceInformation = "D3D11 Hardware";
 		}
 
 		void UpdateDeviceStats()
 		{
 			StringBuilder builder = new StringBuilder();
-
-			builder.Append("D3D9 Vsync ");
-
-			if (CurrentSettings.Direct3D9.PresentParameters.PresentationInterval == PresentInterval.Immediate)
-				builder.Append("off");
-			else
-				builder.Append("on");
-
-			builder.AppendFormat(" ({0}x{1}), ", CurrentSettings.Direct3D9.PresentParameters.BackBufferWidth, CurrentSettings.Direct3D9.PresentParameters.BackBufferHeight);
-
-			if (CurrentSettings.Direct3D9.AdapterFormat == CurrentSettings.Direct3D9.PresentParameters.BackBufferFormat)
-				builder.Append(Enum.GetName(typeof(Vortice.Direct3D9.Format), CurrentSettings.Direct3D9.AdapterFormat));
-			else
-				builder.AppendFormat("backbuf {0}, adapter {1}",
-					Enum.GetName(typeof(Vortice.Direct3D9.Format), CurrentSettings.Direct3D9.AdapterFormat),
-					Enum.GetName(typeof(Vortice.Direct3D9.Format), CurrentSettings.Direct3D9.PresentParameters.BackBufferFormat));
-
-			builder.AppendFormat(" ({0})", Enum.GetName(typeof(Vortice.Direct3D9.Format), CurrentSettings.Direct3D9.PresentParameters.AutoDepthStencilFormat));
-
-			if (CurrentSettings.Direct3D9.PresentParameters.MultiSampleType == MultisampleType.NonMaskable)
-				builder.AppendFormat(" (Nonmaskable Multisample {0}x)", (int)CurrentSettings.Direct3D9.PresentParameters.MultiSampleQuality);
-			else if (CurrentSettings.Direct3D9.PresentParameters.MultiSampleType != MultisampleType.None)
-				builder.AppendFormat(" (Multisample {0}x Type={1})", (int)CurrentSettings.Direct3D9.PresentParameters.MultiSampleQuality, CurrentSettings.Direct3D9.PresentParameters.MultiSampleType.ToString());
-
+			builder.Append("D3D11 Vsync ");
+			builder.Append(CurrentSettings.EnableVSync ? "on" : "off");
+			builder.AppendFormat(" ({0}x{1}), B8G8R8A8_UNorm",
+				CurrentSettings.BackBufferWidth,
+				CurrentSettings.BackBufferHeight);
 			DeviceStatistics = builder.ToString();
-		}
-
-		int GetAdapterOrdinal(IntPtr screen)
-		{
-			AdapterInfo9 adapter = null;
-			foreach (AdapterInfo9 a in Enumeration9.Adapters)
-			{
-				if (Direct3D9Object.GetAdapterMonitor((uint)a.AdapterOrdinal) == screen)
-				{
-					adapter = a;
-					break;
-				}
-			}
-
-			if (adapter != null)
-				return adapter.AdapterOrdinal;
-
-			return -1;
-		}
-
-		internal static void EnsureD3D9()
-		{
-			if (Direct3D9Object == null)
-#if TEST_Direct3D9Ex
-				Direct3D9Object = new Direct3DEx();		// yyagi
-#else
-				Direct3D9Object = Vortice.Direct3D9.D3D9.Direct3DCreate9();
-#endif
 		}
 	}
 }

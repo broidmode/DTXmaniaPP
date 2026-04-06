@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 using System.Drawing;
 using System.Diagnostics;
 using System.IO;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using FDK;
@@ -36,7 +35,7 @@ namespace DTXMania
                         graphics = Graphics.FromImage(bitmap2);
                         graphics.DrawString(this.strパネル文字列, this.ft表示用フォント, Brushes.White, (float)0f, (float)0f);
                         graphics.Dispose();
-                        this.txPanel = new CTexture(CDTXMania.app.Device, bitmap2, CDTXMania.TextureFormat);
+                        this.txPanel = new CTexture( CDTXMania.app.Device, bitmap2, false );
                         this.txPanel.vcScaleRatio = new Vector3(0.5f, 0.5f, 1f);
                         bitmap2.Dispose();
                     }

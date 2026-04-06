@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using Un4seen.Bass;
-using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
 using Vortice.DirectSound;
