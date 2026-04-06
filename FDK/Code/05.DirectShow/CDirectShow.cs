@@ -6,6 +6,7 @@ using System.IO;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Threading;
+using System.Threading.Tasks;
 using Vortice.Direct3D9;
 using Vortice.Mathematics;
 using System.Numerics;
@@ -570,24 +571,19 @@ namespace FDK
 					{
 						// 転送開始。
 
-						var ar = new IAsyncResult[ CDirectShow.n並列度 ];
+						var tasks = new Task[ CDirectShow.n並列度 ];
 						for( int i = 0; i < CDirectShow.n並列度; i++ )
 						{
-							ar[ i ] = ( bARGB32 ) ?
-								this.dgライン描画ARGB32[ i ].BeginInvoke( i, null, null ) :
-								this.dgライン描画XRGB32[ i ].BeginInvoke( i, null, null );
+							int idx = i;
+							tasks[ i ] = ( bARGB32 ) ?
+								Task.Run( () => this.tライン描画ARGB32( idx ) ) :
+								Task.Run( () => this.tライン描画XRGB32( idx ) );
 						}
 
 
 						// 転送完了待ち。
 
-						for( int i = 0; i < CDirectShow.n並列度; i++ )
-						{
-							if( bARGB32 )
-								this.dgライン描画ARGB32[ i ].EndInvoke( ar[ i ] );
-							else
-								this.dgライン描画XRGB32[ i ].EndInvoke( ar[ i ] );
-						}
+						Task.WaitAll( tasks );
 					}
 
 					this.ptrSnap = null;

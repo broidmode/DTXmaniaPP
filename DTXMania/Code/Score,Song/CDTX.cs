@@ -8,8 +8,8 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Globalization;
 using System.Threading;
+using System.Threading.Tasks;
 using FDK;
-
 namespace DTXMania
 {
 	internal class CDTX : CActivity
@@ -1702,7 +1702,7 @@ namespace DTXMania
 					#region [ メインスレッド(テクスチャ定義)とバックグラウンドスレッド(読み出し_デコード)を並列動作させ高速化 ]
 					//Trace.TraceInformation( "Main: ThreadID(Main)=" + Thread.CurrentThread.ManagedThreadId + ", listCount=" + this.listBMP.Count );
 					nLoadDone = 0;
-					backgroundBMPLoadAll.BeginInvoke( listBMP, null, null );
+					Task.Run(() => BMPLoadAll(listBMP));
 
 					// t.Priority = ThreadPriority.Lowest;
 					// t.Start( listBMP );
@@ -1749,7 +1749,7 @@ namespace DTXMania
 					#region [ メインスレッド(テクスチャ定義)とバックグラウンドスレッド(読み出し_デコード)を並列動作させ高速化 ]
 					//Trace.TraceInformation( "Main: ThreadID(Main)=" + Thread.CurrentThread.ManagedThreadId + ", listCount=" + this.listBMP.Count );
 					nLoadDone = 0;
-					backgroundBMPTEXLoadAll.BeginInvoke( listBMPTEX, null, null );
+					Task.Run(() => BMPTEXLoadAll(listBMPTEX));
 					int c = listBMPTEX.Count;
 					while ( nLoadDone < c )
 					{
