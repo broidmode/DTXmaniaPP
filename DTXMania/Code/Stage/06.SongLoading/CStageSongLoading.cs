@@ -324,12 +324,12 @@ namespace DTXMania
                     #region[ 曲名、アーティスト名テクスチャの生成 ]
                     if ((this.strSongTitle != null) && (this.strSongTitle.Length > 0))
                     {
-                        this.pfタイトル = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 40, FontStyle.Regular);
-                        Bitmap bmpSongName = new Bitmap(1, 1);
-                        bmpSongName = this.pfタイトル.DrawPrivateFont(this.strSongTitle, CPrivateFont.DrawMode.Edge, Color.Black, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor, true);
-                        this.txTitle = CDTXMania.tGenerateTexture(bmpSongName, false);
-                        CDTXMania.t安全にDisposeする( ref bmpSongName );
-                        CDTXMania.t安全にDisposeする( ref this.pfタイトル );
+                        using var dwFont = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 40);
+                        this.txTitle = dwFont.RenderToTexture(
+                            CDTXMania.app.Device, this.strSongTitle,
+                            CDirectWriteFont.DrawMode.Gradation,
+                            Color.White, Color.Black,
+                            this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor );
                     }
                     else
                     {
@@ -338,12 +338,12 @@ namespace DTXMania
 
                     if ((this.strArtistName != null) && (this.strArtistName.Length > 0))
                     {
-                        pfアーティスト = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 30, FontStyle.Regular);
-                        Bitmap bmpArtistName = new Bitmap(1, 1);
-                        bmpArtistName = pfアーティスト.DrawPrivateFont(this.strArtistName, CPrivateFont.DrawMode.Edge, Color.Black, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor, true);
-                        this.txArtist = CDTXMania.tGenerateTexture(bmpArtistName, false);
-                        CDTXMania.t安全にDisposeする( ref bmpArtistName );
-                        CDTXMania.t安全にDisposeする( ref this.pfアーティスト );
+                        using var dwFont = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 30);
+                        this.txArtist = dwFont.RenderToTexture(
+                            CDTXMania.app.Device, this.strArtistName,
+                            CDirectWriteFont.DrawMode.Gradation,
+                            Color.White, Color.Black,
+                            this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor );
                     }
                     else
                     {

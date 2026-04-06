@@ -112,6 +112,22 @@ namespace FDK
 			this.filename = "";
 			this.Format = Vortice.DXGI.Format.B8G8R8A8_UNorm;
 		}
+
+		/// <summary>
+		/// Creates a CTexture from a pre-made ShaderResourceTexture with explicit logical size.
+		/// The actual GPU texture may be at a higher resolution (e.g., for resolution-aware
+		/// text rendering), but the drawing pipeline uses the logical dimensions for
+		/// positioning and fScreenRatio scaling.
+		/// </summary>
+		internal CTexture( ShaderResourceTexture texture, int logicalWidth, int logicalHeight )
+			: this()
+		{
+			this.szImageSize = new Size( logicalWidth, logicalHeight );
+			this.szTextureSize = new Size( logicalWidth, logicalHeight );
+			this.rcFullImage = new Rectangle( 0, 0, logicalWidth, logicalHeight );
+			this.texture = texture;
+			this.bTextureDisposed = false;
+		}
 		
 		/// <summary>
 		/// Creates a texture from a Bitmap with black (0xFF000000) as transparent color key.

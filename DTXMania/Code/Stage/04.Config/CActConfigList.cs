@@ -2432,7 +2432,7 @@ namespace DTXMania
             nSkinSampleIndex = -1;
             #endregion
 
-            this.prvFont = new CPrivateFastFont( new FontFamily( CDTXMania.ConfigIni.str選曲リストフォント ), 15 );	// t項目リストの設定 の前に必要
+            this.prvFont = new CDirectWriteFont( CDTXMania.ConfigIni.str選曲リストフォント, 15 );	// t項目リストの設定 の前に必要
 
             this.tSetupItemList_Bass();		// #27795 2012.3.11 yyagi; System設定の中でDrumsの設定を参照しているため、
             this.tSetupItemList_Guitar();	// 活性化の時点でDrumsの設定も入れ込んでおかないと、System設定中に例外発生することがある。
@@ -2529,7 +2529,7 @@ namespace DTXMania
             this.txLane = CDTXMania.tGenerateTexture(CSkin.Path(@"Graphics\7_Paret.png"));
             this.txShutter = CDTXMania.tGenerateTexture(CSkin.Path(@"Graphics\7_shutter.png"));
             this.txSkinSample1 = null;		// スキン選択時に動的に設定するため、ここでは初期化しない
-            this.prvFontForToastMessage = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 14, FontStyle.Regular);
+            this.prvFontForToastMessage = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 14);
             base.OnManagedCreateResources();
         }
         public override void OnManagedReleaseResources()
@@ -2758,11 +2758,7 @@ namespace DTXMania
 				}
 				else
 				{
-					Bitmap bmpItem = prvFont.DrawPrivateFont( this.listItems[ nItem ].strItemName, Color.White, Color.Transparent );
-					listMenu[ nItem ].txMenuItemRight = CDTXMania.tGenerateTexture( bmpItem );
-//					ctItem.tDraw2D( CDTXMania.app.Device, ( x + 0x12 ) * Scale.X, ( y + 12 ) * Scale.Y - 20 );
-//					CDTXMania.tReleaseTexture( ref ctItem );
-					CDTXMania.t安全にDisposeする( ref bmpItem );
+					listMenu[ nItem ].txMenuItemRight = prvFont.RenderToTexture( CDTXMania.app.Device, this.listItems[ nItem ].strItemName, CDirectWriteFont.DrawMode.Normal, Color.White, Color.Transparent );
 				}
 				//CDTXMania.stageConfig.actFont.tDrawString( x + 0x12, y + 12, this.listItems[ nItem ].strItemName );
                 //-----------------
@@ -2851,13 +2847,9 @@ namespace DTXMania
 				}
 				if ( b強調 )
 				{
-					Bitmap bmpStr = b強調 ?
-						prvFont.DrawPrivateFont( strParam, Color.White, Color.Black, Color.Yellow, Color.OrangeRed ) :
-						prvFont.DrawPrivateFont( strParam, Color.Black, Color.Transparent );
-					CTexture txStr = CDTXMania.tGenerateTexture( bmpStr, false );
+					CTexture txStr = prvFont.RenderToTexture( CDTXMania.app.Device, strParam, CDirectWriteFont.DrawMode.Gradation, Color.White, Color.Black, Color.Yellow, Color.OrangeRed );
 					txStr.tDraw2D( CDTXMania.app.Device, ( n新項目パネルX + 260 ) , ( y + 20 ) );
 					CDTXMania.tReleaseTexture( ref txStr );
-					CDTXMania.t安全にDisposeする( ref bmpStr );
 				}
 				else
 				{
@@ -2869,10 +2861,7 @@ namespace DTXMania
 						object o = this.listItems[ nItem ].obj現在値();
 						stm.strParam = ( o == null ) ? "" : o.ToString();
 
-				        Bitmap bmpStr =
-				            prvFont.DrawPrivateFont( strParam, Color.Black, Color.Transparent );
-				        stm.txParam = CDTXMania.tGenerateTexture( bmpStr, false );
-				        CDTXMania.t安全にDisposeする( ref bmpStr );
+stm.txParam = prvFont.RenderToTexture( CDTXMania.app.Device, strParam, CDirectWriteFont.DrawMode.Normal, Color.Black, Color.Transparent );
 
 				        listMenu[ nItem ] = stm;
 				    }
@@ -3120,10 +3109,10 @@ namespace DTXMania
         private CTexture txカーソル;
         private CTexture tx説明文パネル;
         private CTexture txToastMessage;
-        private CPrivateFastFont prvFontForToastMessage;
+        private CDirectWriteFont prvFontForToastMessage;
         private CCounter ctToastMessageCounter;
 
-        private CPrivateFastFont prvFont;
+        private CDirectWriteFont prvFont;
         //private List<string> list項目リスト_str最終描画名;
         private struct stMenuItemRight
         {
@@ -3759,9 +3748,7 @@ namespace DTXMania
 
             if (strMessage != "" && this.prvFontForToastMessage != null)
             {                
-                Bitmap bmpItem = this.prvFontForToastMessage.DrawPrivateFont(strMessage, Color.White, Color.Black);
-                this.txToastMessage = CDTXMania.tGenerateTexture(bmpItem);                
-                CDTXMania.t安全にDisposeする(ref bmpItem);
+                this.txToastMessage = this.prvFontForToastMessage.RenderToTexture(CDTXMania.app.Device, strMessage, CDirectWriteFont.DrawMode.Edge, Color.White, Color.Black);
             }
             else 
             {

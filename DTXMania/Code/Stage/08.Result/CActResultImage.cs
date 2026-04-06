@@ -72,45 +72,30 @@ namespace DTXMania
                 else
                     this.strSongName = CDTXMania.DTX.TITLE;
 
-                CPrivateFastFont pfTitle = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 20, FontStyle.Regular);
-                Bitmap bmpSongName = pfTitle.DrawPrivateFont(this.strSongName, CPrivateFont.DrawMode.Edge, Color.Black, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor, true);
-                this.txSongName = CDTXMania.tGenerateTexture(bmpSongName, false);
-                bmpSongName.Dispose();
-                pfTitle.Dispose();
+                using (var dwTitle = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 20))
+                    this.txSongName = dwTitle.RenderToTexture(CDTXMania.app.Device, this.strSongName, CDirectWriteFont.DrawMode.Gradation, Color.White, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor);
 
-                CPrivateFastFont pfArtist = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 15, FontStyle.Regular);
-                Bitmap bmpArtistName = pfArtist.DrawPrivateFont(CDTXMania.DTX.ARTIST, CPrivateFont.DrawMode.Edge, Color.Black, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor, true);
-                this.txArtistName = CDTXMania.tGenerateTexture(bmpArtistName, false);
-                bmpArtistName.Dispose();
-                pfArtist.Dispose();
+                using (var dwArtist = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 15))
+                    this.txArtistName = dwArtist.RenderToTexture(CDTXMania.app.Device, CDTXMania.DTX.ARTIST, CDirectWriteFont.DrawMode.Gradation, Color.White, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor);
 
                 if (CDTXMania.ConfigIni.nPlaySpeed != 20)
                 {
                     double d = (double)(CDTXMania.ConfigIni.nPlaySpeed / 20.0);
                     String strModifiedPlaySpeed = "Play Speed: x" + d.ToString("0.000");
-                    CPrivateFastFont pfModifiedPlaySpeed = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 18, FontStyle.Regular);
-                    Bitmap bmpModifiedPlaySpeed = pfModifiedPlaySpeed.DrawPrivateFont(strModifiedPlaySpeed, CPrivateFont.DrawMode.Edge, Color.White, Color.White, Color.Black, Color.Red, true);
-                    this.txModifiedPlaySpeed = CDTXMania.tGenerateTexture(bmpModifiedPlaySpeed, false);
-                    bmpModifiedPlaySpeed.Dispose();
-                    pfModifiedPlaySpeed.Dispose();
+                    using (var dwSpeed = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 18))
+                        this.txModifiedPlaySpeed = dwSpeed.RenderToTexture(CDTXMania.app.Device, strModifiedPlaySpeed, CDirectWriteFont.DrawMode.Gradation, Color.Black, Color.White, Color.Black, Color.Red);
                 }
 
                 if (CDTXMania.stageResult.bIsTrainingMode)
                 {
                     String strResultsNotSavedTraining = "Training feature used";
-                    CPrivateFastFont pfResultsNotSavedTraining = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 18, FontStyle.Regular);
-                    Bitmap bmpResultsNotSavedTraining = pfResultsNotSavedTraining.DrawPrivateFont(strResultsNotSavedTraining, CPrivateFont.DrawMode.Edge, Color.White, Color.White, Color.Black, Color.Red, true);
-                    this.txTrainingMode = CDTXMania.tGenerateTexture(bmpResultsNotSavedTraining, false);
-                    bmpResultsNotSavedTraining.Dispose();
-                    pfResultsNotSavedTraining.Dispose();
+                    using (var dwTraining = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 18))
+                        this.txTrainingMode = dwTraining.RenderToTexture(CDTXMania.app.Device, strResultsNotSavedTraining, CDirectWriteFont.DrawMode.Gradation, Color.Black, Color.White, Color.Black, Color.Red);
                 }
 
                 String strResultsNotSaved = "Score will not be saved";
-                CPrivateFastFont pfResultsNotSaved = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 18, FontStyle.Regular);
-                Bitmap bmpResultsNotSaved = pfResultsNotSaved.DrawPrivateFont(strResultsNotSaved, CPrivateFont.DrawMode.Edge, Color.White, Color.White, Color.Black, Color.Red, true);
-                this.txResultsNotSaved = CDTXMania.tGenerateTexture(bmpResultsNotSaved, false);
-                bmpResultsNotSaved.Dispose();
-                pfResultsNotSaved.Dispose();
+                using (var dwNotSaved = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 18))
+                    this.txResultsNotSaved = dwNotSaved.RenderToTexture(CDTXMania.app.Device, strResultsNotSaved, CDirectWriteFont.DrawMode.Gradation, Color.Black, Color.White, Color.Black, Color.Red);
                 #endregion
 
                 Bitmap bitmap2 = new Bitmap(0x3a, 0x12);

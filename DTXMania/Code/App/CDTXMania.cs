@@ -3111,6 +3111,8 @@ for (int i = 0; i < 3; i++) {
 
                 //				ct.Dispose();
 
+                CDirectWriteFont.Shutdown();
+
                 #region [ タイマの終了処理 ]
                 //---------------------
                 Trace.TraceInformation("タイマの終了処理を行います。");

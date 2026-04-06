@@ -276,7 +276,7 @@ namespace DTXMania
 				this.txBackground = CDTXMania.tGenerateTexture( CSkin.Path( @"Graphics\5_background.jpg" ), false );
 				this.txTopPanel = CDTXMania.tGenerateTexture( CSkin.Path( @"Graphics\5_header panel.png" ), false );
 				this.txBottomPanel = CDTXMania.tGenerateTexture( CSkin.Path( @"Graphics\5_footer panel.png" ), false );
-				this.prvFontSearchInputNotification = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 14, FontStyle.Regular);
+				this.prvFontSearchInputNotification = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 14);
 				//this.dsBackgroundVideo = CDTXMania.t失敗してもスキップ可能なDirectShowを生成する(CSkin.Path(@"Graphics\5_background.mp4"), CDTXMania.app.WindowHandle, true);
 				this.txBPMLabel = CDTXMania.tGenerateTexture(CSkin.Path(@"Graphics\5_BPM.png"), false);
 
@@ -919,7 +919,7 @@ namespace DTXMania
 
 		//
 		private Font ftSearchInputNotificationFont;
-		private CPrivateFastFont prvFontSearchInputNotification;
+		private CDirectWriteFont prvFontSearchInputNotification;
 		private CTexture txSearchInputNotification = null;
 
 		//
@@ -1238,12 +1238,7 @@ namespace DTXMania
 			//
 			if(strNotification != "")
             {
-				//using (Bitmap bmp = prvFontSearchInputNotification.DrawPrivateFont(strNotification,
-				//CPrivateFont.DrawMode.Edge, Color.White, Color.White, Color.White, Color.White, true))
-				using (Bitmap bmp = prvFontSearchInputNotification.DrawPrivateFont(strNotification, Color.White, Color.Black))
-				{
-					this.txSearchInputNotification = CDTXMania.tGenerateTexture(bmp);
-				}
+				this.txSearchInputNotification = prvFontSearchInputNotification.RenderToTexture(CDTXMania.app.Device, strNotification, CDirectWriteFont.DrawMode.Edge, Color.White, Color.Black);
 			}
             else
             {

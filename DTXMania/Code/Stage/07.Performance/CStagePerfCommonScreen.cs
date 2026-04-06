@@ -5763,11 +5763,8 @@ namespace DTXMania
             {
                 double d = (double)(CDTXMania.ConfigIni.nPlaySpeed / 20.0);
                 String strModifiedPlaySpeed = "Play Speed: x" + d.ToString("0.000");
-                CPrivateFastFont pfModifiedPlaySpeed = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 18, FontStyle.Regular);
-                Bitmap bmpModifiedPlaySpeed = pfModifiedPlaySpeed.DrawPrivateFont(strModifiedPlaySpeed, CPrivateFont.DrawMode.Edge, Color.White, Color.White, Color.Black, Color.Red, true);
-                this.txPlaySpeed = CDTXMania.tGenerateTexture(bmpModifiedPlaySpeed, false);
-                bmpModifiedPlaySpeed.Dispose();
-                pfModifiedPlaySpeed.Dispose();
+                using (var dwSpeed = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 18))
+                    this.txPlaySpeed = dwSpeed.RenderToTexture(CDTXMania.app.Device, strModifiedPlaySpeed, CDirectWriteFont.DrawMode.Gradation, Color.Black, Color.White, Color.Black, Color.Red);
             }
         }
 

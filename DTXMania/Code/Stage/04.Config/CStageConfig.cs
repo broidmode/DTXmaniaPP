@@ -121,18 +121,13 @@ namespace DTXMania
                 this.txMenuパネル = CDTXMania.tGenerateTexture( CSkin.Path( @"Graphics\4_menu panel.png" ) );
                 this.txItemBar = CDTXMania.tGenerateTexture( CSkin.Path( @"Graphics\4_item bar.png" ) );
 
-				this.prvFont = new CPrivateFastFont( new FontFamily( CDTXMania.ConfigIni.str選曲リストフォント ), 18 );
+				this.prvFont = new CDirectWriteFont( CDTXMania.ConfigIni.str選曲リストフォント, 18 );
 				string[] strMenuItem = { "System", "Drums", "Guitar", "Bass", "Exit" };
 				txMenuItemLeft = new CTexture[ strMenuItem.Length, 2 ];
 				for ( int i = 0; i < strMenuItem.Length; i++ )
 				{
-					Bitmap bmpStr;
-					bmpStr = prvFont.DrawPrivateFont( strMenuItem[ i ], Color.White, Color.Black );
-					txMenuItemLeft[ i, 0 ] = CDTXMania.tGenerateTexture( bmpStr, false );
-					bmpStr.Dispose();
-					bmpStr = prvFont.DrawPrivateFont( strMenuItem[ i ], Color.White, Color.Black, Color.Yellow, Color.OrangeRed );
-					txMenuItemLeft[ i, 1 ] = CDTXMania.tGenerateTexture( bmpStr, false );
-					bmpStr.Dispose();
+					txMenuItemLeft[ i, 0 ] = prvFont.RenderToTexture( CDTXMania.app.Device, strMenuItem[ i ], CDirectWriteFont.DrawMode.Edge, Color.White, Color.Black );
+					txMenuItemLeft[ i, 1 ] = prvFont.RenderToTexture( CDTXMania.app.Device, strMenuItem[ i ], CDirectWriteFont.DrawMode.Gradation, Color.White, Color.Black, Color.Yellow, Color.OrangeRed );
 				}
 
                 if (this.bFocusIsOnMenu)
@@ -473,7 +468,7 @@ namespace DTXMania
         private CTexture tx背景;
         private CTexture txMenuパネル;
         private CTexture txItemBar;
-        private CPrivateFastFont prvFont;
+        private CDirectWriteFont prvFont;
         private CTexture[,] txMenuItemLeft;
         public CCounter ctDisplayWait;
 

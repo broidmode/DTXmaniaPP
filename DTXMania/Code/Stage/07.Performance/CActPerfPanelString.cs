@@ -100,17 +100,11 @@ namespace DTXMania
                 else
                     this.strSongName = CDTXMania.DTX.TITLE;
 
-                this.pfタイトル = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 20, FontStyle.Regular);
-                Bitmap bmpSongName = new Bitmap(1, 1);
-                bmpSongName = this.pfタイトル.DrawPrivateFont(this.strSongName, CPrivateFont.DrawMode.Edge, Color.Black, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor, true);
-                this.txSongName = CDTXMania.tGenerateTexture(bmpSongName, false);
-                bmpSongName.Dispose();
+                this.pfタイトル = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 20);
+                this.txSongName = this.pfタイトル.RenderToTexture(CDTXMania.app.Device, this.strSongName, CDirectWriteFont.DrawMode.Gradation, Color.White, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor);
 
-                this.pfアーティスト = new CPrivateFastFont(new FontFamily(CDTXMania.ConfigIni.str選曲リストフォント), 15, FontStyle.Regular);
-                Bitmap bmpArtistName = new Bitmap(1, 1);
-                bmpArtistName = this.pfアーティスト.DrawPrivateFont(CDTXMania.DTX.ARTIST, CPrivateFont.DrawMode.Edge, Color.Black, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor, true);
-                this.txArtistName = CDTXMania.tGenerateTexture(bmpArtistName, false);
-                bmpArtistName.Dispose();
+                this.pfアーティスト = new CDirectWriteFont(CDTXMania.ConfigIni.str選曲リストフォント, 15);
+                this.txArtistName = this.pfアーティスト.RenderToTexture(CDTXMania.app.Device, CDTXMania.DTX.ARTIST, CDirectWriteFont.DrawMode.Gradation, Color.White, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor);
                 #endregion
 
                 base.OnManagedCreateResources();
@@ -230,8 +224,8 @@ namespace DTXMania
         private CTexture txSongName;
         private CTexture txArtistName;
 
-        private CPrivateFastFont pfタイトル;
-        private CPrivateFastFont pfアーティスト;
+        private CDirectWriteFont pfタイトル;
+        private CDirectWriteFont pfアーティスト;
 
         //2014.04.05.kairera0467 GITADORAグラデーションの色。
         //本当は共通のクラスに設置してそれを参照する形にしたかったが、なかなかいいメソッドが無いため、とりあえず個別に設置。

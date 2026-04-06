@@ -564,8 +564,8 @@ namespace DTXMania
             this.txTopPanel = CDTXMania.tGenerateTexture(CSkin.Path(@"Graphics\5_header song list.png"), false);
             this.txBottomPanel = CDTXMania.tGenerateTexture(CSkin.Path(@"Graphics\5_footer song list.png"), false);
 
-            this.prvFont = new CPrivateFastFont( new FontFamily( CDTXMania.ConfigIni.str選曲リストフォント ), 30, FontStyle.Regular );
-            this.prvFontSmall = new CPrivateFastFont( new FontFamily( CDTXMania.ConfigIni.str選曲リストフォント ), 15, FontStyle.Regular );
+            this.prvFont = new CDirectWriteFont( CDTXMania.ConfigIni.str選曲リストフォント, 30 );
+            this.prvFontSmall = new CDirectWriteFont( CDTXMania.ConfigIni.str選曲リストフォント, 15 );
 
 			for( int i = 0; i < 13; i++ )
             {
@@ -1343,8 +1343,8 @@ namespace DTXMania
 		private CActSelectStatusPanel actステータスパネル;
         private STBar txSongNameBar;           // tx曲名バー
 		private STSongSelectionBar txSongSelectionBar;  // tx選曲バー
-		private CPrivateFastFont prvFont;
-        private CPrivateFastFont prvFontSmall;
+		private CDirectWriteFont prvFont;
+        private CDirectWriteFont prvFontSmall;
 		private string strDefaultPreImage;
 
 		//2014.04.05.kairera0467 GITADORAグラデーションの色。
@@ -1574,19 +1574,13 @@ namespace DTXMania
             //if(prvFont != null)
             //    prvFont.Dispose();
             
-            Bitmap bmp;
-            bmp = prvFont.DrawPrivateFont( str文字, CPrivateFont.DrawMode.Edge, Color.Black, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor, true);
-            CTexture tx文字テクスチャ = CDTXMania.tGenerateTexture( bmp, false );
-            bmp.Dispose();
+            CTexture tx文字テクスチャ = prvFont.RenderToTexture( CDTXMania.app.Device, str文字, CDirectWriteFont.DrawMode.Gradation, Color.White, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor );
 
             return tx文字テクスチャ;
         }
         private CTexture tGenerateTextTexture_Small( string str文字)  // t指定された文字テクスチャを生成する_小
 		{
-            Bitmap bmp;
-            bmp = prvFontSmall.DrawPrivateFont( str文字, CPrivateFont.DrawMode.Edge, Color.Black, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor, true);
-            CTexture tx文字テクスチャ = CDTXMania.tGenerateTexture( bmp, false );
-            bmp.Dispose();
+            CTexture tx文字テクスチャ = prvFontSmall.RenderToTexture( CDTXMania.app.Device, str文字, CDirectWriteFont.DrawMode.Gradation, Color.White, Color.Black, this.clGITADORAgradationTopColor, this.clGITADORAgradationBottomColor );
 
             return tx文字テクスチャ;
         }
